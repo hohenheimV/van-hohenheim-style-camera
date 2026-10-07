@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VHS Cam Prototype</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    .container {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      aspect-ratio: 4 / 3;
+      border: 2px solid #333;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      /* CSS CRT Scanlines overlay effect */
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.3) 50%
+      );
+      background-size: 100% 4px;
+    }
+    .controls {
+      margin-top: 12px;
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #1a1a1a;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      box-sizing: border-box;
+    }
+    .control-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button {
+      padding: 8px 12px;
+      background: #2a2a2a;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:active {
+      background: #444;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    #recBtn.recording {
+      background: #d32f2f;
+      color: white;
+      border-color: #f44336;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+    input[type="text"] {
+      background: #222;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      width: 110px;
+    }
+    label {
+      font-size: 12px;
+      color: #aaa;
+    }
+    .zoom-display {
+      font-size: 12px;
+      min-width: 45px;
+      text-align: center;
+      color: #00ffcc;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <canvas id="vhsCanvas"></canvas>
+  </div>
+
+  <div class="controls">
+    <!-- Main Actions -->
+    <div class="control-row">
+      <button id="startBtn">Start Camera</button>
+      <button id="recBtn" disabled>Start Rec</button>
+    </div>
+
+    <!-- Zoom Controls -->
+    <div class="control-row">
+      <label>Zoom:</label>
+      <button id="zoomOutBtn" disabled>-</button>
+      <span id="zoomVal" class="zoom-display">1.0x</span>
+      <button id="zoomInBtn" disabled>+</button>
+      <button id="zoomResetBtn" disabled>Reset</button>
+    </div>
+
+    <!-- Dynamic Overlay Settings -->
+    <div class="control-row">
+      <div class="control-group">
+        <label for="labelInput">Text Label:</label>
+        <input type="text" id="labelInput" value="PLAY" maxlength="12">
+      </div>
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="dateToggle" checked> Date/Time
+        </label>
+      </div>
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="glitchToggle" checked> Analog Shift
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Video Element -->
+  <video id="webcam" autoplay playsinline style="display:none;"></video>
+
+  <script>
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('vhsCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Controls
+    const startBtn = document.getElementById('startBtn');
+    const recBtn = document.getElementById('recBtn');
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+    const zoomVal = document.getElementById('zoomVal');
+
+    // Overlay Inputs
+    const labelInput = document.getElementById('labelInput');
+    const dateToggle = document.getElementById('dateToggle');
+    const glitchToggle = document.getElementById('glitchToggle');
+
+    let zoomLevel = 1.0;
+    let mediaRecorder;
+    let recordedChunks = [];
+    let isRecording = false;
+
+    // Zoom Button Handlers
+    function updateZoom(newZoom) {
+      zoomLevel = Math.min(Math.max(newZoom, 1.0), 3.0);
+      zoomVal.textContent = zoomLevel.toFixed(1) + 'x';
+    }
+
+    zoomInBtn.addEventListener('click', () => updateZoom(zoomLevel + 0.2));
+    zoomOutBtn.addEventListener('click', () => updateZoom(zoomLevel - 0.2));
+    zoomResetBtn.addEventListener('click', () => updateZoom(1.0));
+
+    // Camera Setup
+    startBtn.addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: 640, height: 480 },
+          audio: false
+        });
+        video.srcObject = stream;
+        video.play();
+        
+        startBtn.style.display = 'none';
+        recBtn.disabled = false;
+        zoomInBtn.disabled = false;
+        zoomOutBtn.disabled = false;
+        zoomResetBtn.disabled = false;
+
+        requestAnimationFrame(processFrame);
+      } catch (err) {
+        alert("Camera access failed: " + err.message);
+      }
+    });
+
+    function processFrame() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = 640;
+        canvas.height = 480;
+
+        // 1. Zoom Logic
+        const sw = 640 / zoomLevel;
+        const sh = 480 / zoomLevel;
+        const sx = (640 - sw) / 2;
+        const sy = (480 - sh) / 2;
+
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, 640, 480);
+
+        // 2. Analog RGB Color Shift
+        if (glitchToggle.checked) {
+          const frameData = ctx.getImageData(0, 0, 640, 480);
+          const data = frameData.data;
+
+          for (let i = 0; i < data.length; i += 4) {
+            if (i + 12 < data.length) {
+              data[i] = data[i + 12]; // Shift Red channel
+            }
+            data[i + 1] = data[i + 1] * 0.88; // Tint adjustment
+          }
+          ctx.putImageData(frameData, 0, 0);
+        }
+
+        // 3. Render Custom Overlay Text (Top Left)
+        const customText = labelInput.value.trim().toUpperCase();
+        if (customText) {
+          ctx.font = 'bold 22px monospace';
+          ctx.fillStyle = '#00ffcc';
+          ctx.shadowColor = 'black';
+          ctx.shadowBlur = 4;
+          ctx.fillText(isRecording ? `REC ${customText}` : customText, 25, 45);
+        }
+
+        // 4. Render Dynamic Date/Time Stamp (Bottom Left)
+        if (dateToggle.checked) {
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric'
+          }).toUpperCase();
+          
+          const timeStr = now.toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          });
+
+          ctx.font = '20px monospace';
+          ctx.fillStyle = '#e6c229'; // Classic VHS Yellow
+          ctx.shadowColor = 'black';
+          ctx.shadowBlur = 4;
+          ctx.fillText(`${dateStr} ${timeStr}`, 25, 445);
+        }
+      }
+      requestAnimationFrame(processFrame);
+    }
+
+    // Recording Logic
+    recBtn.addEventListener('click', () => {
+      if (!isRecording) {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    });
+
+    function startRecording() {
+      recordedChunks = [];
+      const canvasStream = canvas.captureStream(30);
+      
+      let options = { mimeType: 'video/webm' };
+      if (!MediaRecorder.isTypeSupported('video/webm')) {
+        options = { mimeType: 'video/mp4' };
+      }
+
+      try {
+        mediaRecorder = new MediaRecorder(canvasStream, options);
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(canvasStream);
+      }
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = saveVideo;
+
+      mediaRecorder.start();
+      isRecording = true;
+      recBtn.textContent = 'Stop & Save';
+      recBtn.classList.add('recording');
+    }
+
+    function stopRecording() {
+      mediaRecorder.stop();
+      isRecording = false;
+      recBtn.textContent = 'Start Rec';
+      recBtn.classList.remove('recording');
+    }
+
+    function saveVideo() {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `vhs_${Date.now()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+    }
+  </script>
+</body>
+</html>
