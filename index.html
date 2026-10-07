@@ -142,9 +142,9 @@
       <div class="control-group">
         <label for="formatSelect">Format:</label>
         <select id="formatSelect">
-          <option value="vhs_classic">PM 09 : 22 / 03 . OCT . 11</option>
-          <option value="ntsc">OCT 03 2011 / 09:22 PM</option>
-          <option value="pal">03/10/2011 / 21:22:00</option>
+          <option value="vhs_classic">PM 09 : 22 : 05 / 03 . OCT . 11</option>
+          <option value="ntsc">OCT 03 2011 / 09:22:05 PM</option>
+          <option value="pal">03/10/2011 / 21:22:05</option>
         </select>
       </div>
     </div>
@@ -173,7 +173,8 @@
         <label><input type="checkbox" id="glitchToggle" checked> Color Shift</label>
       </div>
       <div class="control-group">
-        <label><input type="checkbox" id="micToggle" checked> Mic</label>
+        <!-- 1. Mute by default on start -->
+        <label><input type="checkbox" id="micToggle"> Mic</label>
       </div>
       <div class="control-group">
         <button id="sysAudioBtn">Add System Audio</button>
@@ -188,7 +189,7 @@
     const canvas = document.getElementById('vhsCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Control Elements
+    // Controls
     const startBtn = document.getElementById('startBtn');
     const stopCamBtn = document.getElementById('stopCamBtn');
     const recBtn = document.getElementById('recBtn');
@@ -215,6 +216,9 @@
     let isLandscape = false;
     let animFrameId = null;
 
+    // Time Tracking Variables for Live Ticking
+    let baseTimeOffset = 0; // Milliseconds offset relative to real-time clock
+
     // Streams & Audio Nodes
     let mediaStream = null;
     let audioCtx = null;
@@ -222,7 +226,7 @@
     let processedAudioDestination = null;
     let systemAudioStream = null;
 
-    // Initialize Default Date to 2011 with today's month & day
+    // Initialize Default Date to 2011 with today's month & day, live time
     function setDefaultDate2011() {
       const now = new Date();
       const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -233,10 +237,22 @@
       const mins = String(now.getMinutes()).padStart(2, '0');
       const secs = String(now.getSeconds()).padStart(2, '0');
       customTime.value = `${hours}:${mins}:${secs}`;
-    }
-    setDefaultDate2011();
 
+      updateBaseTimeOffset();
+    }
+
+    function updateBaseTimeOffset() {
+      if (!customDate.value || !customTime.value) return;
+      const [y, m, d] = customDate.value.split('-');
+      const [h, min, s] = customTime.value.split(':');
+      const selectedDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(h), parseInt(min), parseInt(s || 0));
+      baseTimeOffset = selectedDate.getTime() - Date.now();
+    }
+
+    customDate.addEventListener('change', updateBaseTimeOffset);
+    customTime.addEventListener('change', updateBaseTimeOffset);
     resetDateTimeBtn.addEventListener('click', setDefaultDate2011);
+    setDefaultDate2011();
 
     // Orientation Handling
     function checkOrientation() {
@@ -263,6 +279,11 @@
           audio: true
         });
         
+        // Mute mic track immediately on start (Default Muted)
+        if (mediaStream.getAudioTracks().length > 0) {
+          mediaStream.getAudioTracks()[0].enabled = micToggle.checked;
+        }
+
         video.srcObject = mediaStream;
         video.play();
 
@@ -277,7 +298,7 @@
 
         processFrame();
       } catch (err) {
-        alert("Camera or Mic access failed: " + err.message);
+        alert("Camera access failed: " + err.message);
       }
     });
 
@@ -285,8 +306,6 @@
     stopCamBtn.addEventListener('click', stopCameraHardware);
 
     function stopCameraHardware() {
-      if (isRecording) stopRecording();
-
       if (animFrameId) cancelAnimationFrame(animFrameId);
 
       if (mediaStream) {
@@ -311,6 +330,8 @@
       zoomInBtn.disabled = true;
       zoomOutBtn.disabled = true;
       zoomResetBtn.disabled = true;
+      sysAudioBtn.textContent = "Add System Audio";
+      sysAudioBtn.disabled = false;
     }
 
     // Web Audio Low-Pass Filter Setup
@@ -328,7 +349,6 @@
       lowPassFilter.connect(gainNode);
       gainNode.connect(processedAudioDestination);
 
-      // Mic Input
       if (micStream.getAudioTracks().length > 0) {
         micStreamSource = audioCtx.createMediaStreamSource(micStream);
         micStreamSource.connect(lowPassFilter);
@@ -342,7 +362,7 @@
       }
     });
 
-    // Capture Background / System Audio
+    // Capture Background / System Audio (For Spotify or System Sound)
     sysAudioBtn.addEventListener('click', async () => {
       try {
         systemAudioStream = await navigator.mediaDevices.getDisplayMedia({
@@ -415,34 +435,22 @@
         ctx.fillText(isRecording ? `REC ${customText}` : customText, 25, 45);
       }
 
-      // Bottom Left Multi-line Timestamp
+      // Bottom Left Multi-line Dynamic Timestamp
       if (dateToggle.checked) {
-        const dateTimeObj = parseSelectedDateTime();
-        const formatted = getFormattedDateTime(dateTimeObj, formatSelect.value);
+        // Calculate moving current timestamp based on offset
+        const currentDynamicTime = new Date(Date.now() + baseTimeOffset);
+        const formatted = getFormattedDateTime(currentDynamicTime, formatSelect.value);
 
         ctx.font = '20px monospace';
         ctx.fillStyle = '#e6c229'; // VHS Yellow
         ctx.shadowColor = 'black';
         ctx.shadowBlur = 4;
 
-        // Line 1: Time (Top)
+        // Line 1: Time with live ticking seconds
         ctx.fillText(formatted.timeStr, 25, h - 60);
-        // Line 2: Date (Bottom)
+        // Line 2: Date
         ctx.fillText(formatted.dateStr, 25, h - 32);
       }
-    }
-
-    function parseSelectedDateTime() {
-      let d = new Date();
-      if (customDate.value) {
-        const [y, m, day] = customDate.value.split('-');
-        d.setFullYear(parseInt(y), parseInt(m) - 1, parseInt(day));
-      }
-      if (customTime.value) {
-        const [h, min, s] = customTime.value.split(':');
-        d.setHours(parseInt(h), parseInt(min), parseInt(s || 0));
-      }
-      return d;
     }
 
     function getFormattedDateTime(d, style) {
@@ -470,9 +478,9 @@
           dateStr: `${dayPad}/${String(d.getMonth() + 1).padStart(2, '0')}/${yrFull}`
         };
       } else {
-        // Default Classic VHS style: PM 9 : 22 / 3 . OCT . 11
+        // Default Classic VHS style with live ticking seconds: PM 09 : 22 : 05 / 03 . OCT . 11
         return {
-          timeStr: `${ampm} ${hours12} : ${minsPad}`,
+          timeStr: `${ampm} ${hours12} : ${minsPad} : ${secsPad}`,
           dateStr: `${dayNum} . ${moName} . ${yr2Digit}`
         };
       }
@@ -539,6 +547,8 @@
       setTimeout(() => {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+        // 2. Shut down hardware completely after saving video
+        stopCameraHardware();
       }, 100);
     }
   </script>
