@@ -2,36 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>VHS Cam Prototype</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
-      background: #111;
+      padding: 0;
+      background: #000;
       color: #fff;
       font-family: monospace;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 10px;
-      box-sizing: border-box;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
     }
-    .container {
+    .viewport-container {
+      flex: 1;
       position: relative;
       width: 100%;
-      max-width: 640px;
-      aspect-ratio: 4 / 3;
-      border: 2px solid #333;
-      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: #000;
+      overflow: hidden;
     }
     canvas {
       width: 100%;
       height: 100%;
+      object-fit: contain;
       display: block;
-      /* CSS CRT Scanlines overlay effect */
+      /* CSS CRT Scanlines effect */
       background: linear-gradient(
         rgba(18, 16, 16, 0) 50%, 
         rgba(0, 0, 0, 0.3) 50%
@@ -39,22 +43,20 @@
       background-size: 100% 4px;
     }
     .controls {
-      margin-top: 12px;
       width: 100%;
-      max-width: 640px;
+      background: #1a1a1a;
+      padding: 10px;
+      border-top: 1px solid #333;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      background: #1a1a1a;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px solid #333;
-      box-sizing: border-box;
+      gap: 8px;
+      z-index: 10;
     }
     .control-row {
       display: flex;
       gap: 8px;
       align-items: center;
+      justify-content: space-between;
       flex-wrap: wrap;
     }
     .control-group {
@@ -97,8 +99,8 @@
       padding: 6px 8px;
       border-radius: 4px;
       font-family: monospace;
-      font-size: 13px;
-      width: 110px;
+      font-size: 12px;
+      width: 90px;
     }
     label {
       font-size: 12px;
@@ -106,7 +108,7 @@
     }
     .zoom-display {
       font-size: 12px;
-      min-width: 45px;
+      min-width: 35px;
       text-align: center;
       color: #00ffcc;
     }
@@ -114,41 +116,37 @@
 </head>
 <body>
 
-  <div class="container">
+  <!-- Fullscreen Camera Viewport -->
+  <div class="viewport-container">
     <canvas id="vhsCanvas"></canvas>
   </div>
 
+  <!-- Bottom Control Panel -->
   <div class="controls">
-    <!-- Main Actions -->
-    <div class="control-row">
-      <button id="startBtn">Start Camera</button>
-      <button id="recBtn" disabled>Start Rec</button>
-    </div>
-
-    <!-- Zoom Controls -->
-    <div class="control-row">
-      <label>Zoom:</label>
-      <button id="zoomOutBtn" disabled>-</button>
-      <span id="zoomVal" class="zoom-display">1.0x</span>
-      <button id="zoomInBtn" disabled>+</button>
-      <button id="zoomResetBtn" disabled>Reset</button>
-    </div>
-
-    <!-- Dynamic Overlay Settings -->
     <div class="control-row">
       <div class="control-group">
-        <label for="labelInput">Text Label:</label>
+        <button id="startBtn">Start Camera</button>
+        <button id="recBtn" disabled>Start Rec</button>
+      </div>
+      <div class="control-group">
+        <label>Zoom:</label>
+        <button id="zoomOutBtn" disabled>-</button>
+        <span id="zoomVal" class="zoom-display">1.0x</span>
+        <button id="zoomInBtn" disabled>+</button>
+        <button id="zoomResetBtn" disabled>Reset</button>
+      </div>
+    </div>
+
+    <div class="control-row">
+      <div class="control-group">
+        <label for="labelInput">Label:</label>
         <input type="text" id="labelInput" value="PLAY" maxlength="12">
       </div>
       <div class="control-group">
-        <label>
-          <input type="checkbox" id="dateToggle" checked> Date/Time
-        </label>
+        <label><input type="checkbox" id="dateToggle" checked> Date/Time</label>
       </div>
       <div class="control-group">
-        <label>
-          <input type="checkbox" id="glitchToggle" checked> Analog Shift
-        </label>
+        <label><input type="checkbox" id="glitchToggle" checked> Color Shift</label>
       </div>
     </div>
   </div>
@@ -178,8 +176,21 @@
     let mediaRecorder;
     let recordedChunks = [];
     let isRecording = false;
+    let isLandscape = false;
 
-    // Zoom Button Handlers
+    // Audio Processing Variables
+    let audioCtx;
+    let processedAudioStream;
+
+    // Detect Screen Orientation
+    function checkOrientation() {
+      isLandscape = window.innerWidth > window.innerHeight;
+    }
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    checkOrientation();
+
+    // Zoom Handlers
     function updateZoom(newZoom) {
       zoomLevel = Math.min(Math.max(newZoom, 1.0), 3.0);
       zoomVal.textContent = zoomLevel.toFixed(1) + 'x';
@@ -189,15 +200,19 @@
     zoomOutBtn.addEventListener('click', () => updateZoom(zoomLevel - 0.2));
     zoomResetBtn.addEventListener('click', () => updateZoom(1.0));
 
-    // Camera Setup
+    // Camera & Retro Audio Setup
     startBtn.addEventListener('click', async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: 640, height: 480 },
-          audio: false
+          video: { facingMode: "environment", width: 1280, height: 720 },
+          audio: true // Enabled Mic
         });
+        
         video.srcObject = stream;
         video.play();
+
+        // Setup Web Audio API Low-Pass Filter
+        setupRetroAudio(stream);
         
         startBtn.style.display = 'none';
         recBtn.disabled = false;
@@ -207,16 +222,39 @@
 
         requestAnimationFrame(processFrame);
       } catch (err) {
-        alert("Camera access failed: " + err.message);
+        alert("Camera/Audio access failed: " + err.message);
       }
     });
+
+    function setupRetroAudio(stream) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioCtx.createMediaStreamSource(stream);
+
+      // Low-pass filter cuts off high crisp frequencies (> 2500 Hz)
+      const lowPassFilter = audioCtx.createBiquadFilter();
+      lowPassFilter.type = 'lowpass';
+      lowPassFilter.frequency.setValueAtTime(2500, audioCtx.currentTime);
+
+      // Gain node for slight tape saturation
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.setValueAtTime(1.2, audioCtx.currentTime);
+
+      // Chain audio nodes
+      source.connect(lowPassFilter);
+      lowPassFilter.connect(gainNode);
+
+      // Destination stream for recorder
+      const audioDestination = audioCtx.createMediaStreamDestination();
+      gainNode.connect(audioDestination);
+      processedAudioStream = audioDestination.stream;
+    }
 
     function processFrame() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
         canvas.width = 640;
         canvas.height = 480;
 
-        // 1. Zoom Logic
+        // 1. Zoom Crop Logic
         const sw = 640 / zoomLevel;
         const sh = 480 / zoomLevel;
         const sx = (640 - sw) / 2;
@@ -224,54 +262,68 @@
 
         ctx.drawImage(video, sx, sy, sw, sh, 0, 0, 640, 480);
 
-        // 2. Analog RGB Color Shift
+        // 2. Color Shift Effect
         if (glitchToggle.checked) {
           const frameData = ctx.getImageData(0, 0, 640, 480);
           const data = frameData.data;
 
           for (let i = 0; i < data.length; i += 4) {
             if (i + 12 < data.length) {
-              data[i] = data[i + 12]; // Shift Red channel
+              data[i] = data[i + 12];
             }
-            data[i + 1] = data[i + 1] * 0.88; // Tint adjustment
+            data[i + 1] = data[i + 1] * 0.88;
           }
           ctx.putImageData(frameData, 0, 0);
         }
 
-        // 3. Render Custom Overlay Text (Top Left)
-        const customText = labelInput.value.trim().toUpperCase();
-        if (customText) {
-          ctx.font = 'bold 22px monospace';
-          ctx.fillStyle = '#00ffcc';
-          ctx.shadowColor = 'black';
-          ctx.shadowBlur = 4;
-          ctx.fillText(isRecording ? `REC ${customText}` : customText, 25, 45);
+        // 3. Render Overlays
+        ctx.save();
+        if (isLandscape) {
+          ctx.translate(640, 0);
+          ctx.rotate(90 * Math.PI / 180);
+          renderOverlays(480, 640);
+        } else {
+          renderOverlays(640, 480);
         }
-
-        // 4. Render Dynamic Date/Time Stamp (Bottom Left)
-        if (dateToggle.checked) {
-          const now = new Date();
-          const dateStr = now.toLocaleDateString('en-US', {
-            month: 'short',
-            day: '2-digit',
-            year: 'numeric'
-          }).toUpperCase();
-          
-          const timeStr = now.toLocaleTimeString('en-US', {
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          });
-
-          ctx.font = '20px monospace';
-          ctx.fillStyle = '#e6c229'; // Classic VHS Yellow
-          ctx.shadowColor = 'black';
-          ctx.shadowBlur = 4;
-          ctx.fillText(`${dateStr} ${timeStr}`, 25, 445);
-        }
+        ctx.restore();
       }
       requestAnimationFrame(processFrame);
+    }
+
+    function renderOverlays(w, h) {
+      const customText = labelInput.value.trim().toUpperCase();
+      
+      // Top Left Text
+      if (customText) {
+        ctx.font = 'bold 22px monospace';
+        ctx.fillStyle = '#00ffcc';
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 4;
+        ctx.fillText(isRecording ? `REC ${customText}` : customText, 25, 45);
+      }
+
+      // Bottom Left Date/Time Stamp
+      if (dateToggle.checked) {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric'
+        }).toUpperCase();
+        
+        const timeStr = now.toLocaleTimeString('en-US', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+
+        ctx.font = '20px monospace';
+        ctx.fillStyle = '#e6c229'; // VHS Yellow
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 4;
+        ctx.fillText(`${dateStr} ${timeStr}`, 25, h - 35);
+      }
     }
 
     // Recording Logic
@@ -285,17 +337,24 @@
 
     function startRecording() {
       recordedChunks = [];
-      const canvasStream = canvas.captureStream(30);
       
-      let options = { mimeType: 'video/webm' };
-      if (!MediaRecorder.isTypeSupported('video/webm')) {
+      // Combine Canvas Video Track + Filtered Audio Track
+      const canvasStream = canvas.captureStream(30);
+      const combinedTracks = [
+        ...canvasStream.getVideoTracks(),
+        ...processedAudioStream.getAudioTracks()
+      ];
+      const combinedStream = new MediaStream(combinedTracks);
+
+      let options = { mimeType: 'video/webm;codecs=vp8,opus' };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options = { mimeType: 'video/mp4' };
       }
 
       try {
-        mediaRecorder = new MediaRecorder(canvasStream, options);
+        mediaRecorder = new MediaRecorder(combinedStream, options);
       } catch (e) {
-        mediaRecorder = new MediaRecorder(canvasStream);
+        mediaRecorder = new MediaRecorder(combinedStream);
       }
 
       mediaRecorder.ondataavailable = (event) => {
