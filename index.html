@@ -147,7 +147,7 @@
         <button id="startBtn">Start Cam</button>
         <button id="stopCamBtn" disabled>Stop Cam</button>
         <button id="recBtn" disabled>Start Rec</button>
-        <button id="rotateBtn">Rotate Label ↻</button>
+        <button id="rotateBtn">Rotate Overlay ↻</button>
       </div>
 
       <div class="control-group">
@@ -262,8 +262,8 @@
     let recStartTime = 0;
     let animFrameId = null;
 
-    // Camera Label Overlay Rotation Angle (0, 90, 180, 270)
-    let labelRotationAngle = 0;
+    // Overlay Rotation Angle (0, 90, 180, 270)
+    let overlayRotationAngle = 0;
 
     // Canvas Native Resolution State
     let canvasWidth = 640;
@@ -278,9 +278,9 @@
     let micStreamSource = null;
     let processedAudioDestination = null;
 
-    // Rotate Only Labels Handler
+    // Rotate Overlay (Labels + Effects) Handler
     rotateBtn.addEventListener('click', () => {
-      labelRotationAngle = (labelRotationAngle + 90) % 360;
+      overlayRotationAngle = (overlayRotationAngle + 90) % 360;
     });
 
     function updateCanvasDimensions() {
@@ -435,16 +435,11 @@
     // Main Canvas Render Loop
     function processFrame() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        // Render Camera Video (Unrotated Frame)
+        // Step 1: Draw Video Frame Base (Always Fixed & Upright)
         renderVideoFrame(canvasWidth, canvasHeight);
 
-        // Apply Glitch / Grain / VCR Effects
-        if (glitchToggle.checked) applyGlitchEffect(canvasWidth, canvasHeight);
-        if (grainToggle.checked) renderTapeGrain(canvasWidth, canvasHeight);
-        if (trackingToggle.checked) renderTrackingDistortion(canvasWidth, canvasHeight);
-
-        // Render Rotated Overlays / Labels Only
-        renderRotatedOverlays(canvasWidth, canvasHeight);
+        // Step 2: Draw Rotated VHS Effects & Text Overlays Together
+        renderRotatedOverlayLayer(canvasWidth, canvasHeight);
       }
       animFrameId = requestAnimationFrame(processFrame);
     }
@@ -455,6 +450,49 @@
       const sx = (video.videoWidth - sw) / 2;
       const sy = (video.videoHeight - sh) / 2;
       ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
+    }
+
+    function renderRotatedOverlayLayer(w, h) {
+      ctx.save();
+
+      // Transform space for both effects and labels
+      if (overlayRotationAngle === 90) {
+        ctx.translate(w, 0);
+        ctx.rotate(90 * Math.PI / 180);
+        applyEffectsAndLabels(h, w);
+      } else if (overlayRotationAngle === 180) {
+        ctx.translate(w, h);
+        ctx.rotate(180 * Math.PI / 180);
+        applyEffectsAndLabels(w, h);
+      } else if (overlayRotationAngle === 270) {
+        ctx.translate(0, h);
+        ctx.rotate(-90 * Math.PI / 180);
+        applyEffectsAndLabels(h, w);
+      } else {
+        applyEffectsAndLabels(w, h);
+      }
+
+      ctx.restore();
+    }
+
+    function applyEffectsAndLabels(w, h) {
+      // Rotated Glitch Shift
+      if (glitchToggle.checked) {
+        applyGlitchEffect(w, h);
+      }
+
+      // Rotated Tape Grain
+      if (grainToggle.checked) {
+        renderTapeGrain(w, h);
+      }
+
+      // Rotated VCR Tracking
+      if (trackingToggle.checked) {
+        renderTrackingDistortion(w, h);
+      }
+
+      // Rotated Text & Timestamps
+      drawTextContent(w, h);
     }
 
     function applyGlitchEffect(w, h) {
@@ -498,30 +536,6 @@
         ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
         ctx.fillRect(0, jitterY, w, 1);
       }
-    }
-
-    // Render Crisp Labels with Dynamic Rotation
-    function renderRotatedOverlays(w, h) {
-      ctx.save();
-
-      // Transform coordinate space for label rotation inside camera
-      if (labelRotationAngle === 90) {
-        ctx.translate(w, 0);
-        ctx.rotate(90 * Math.PI / 180);
-        drawTextContent(h, w);
-      } else if (labelRotationAngle === 180) {
-        ctx.translate(w, h);
-        ctx.rotate(180 * Math.PI / 180);
-        drawTextContent(w, h);
-      } else if (labelRotationAngle === 270) {
-        ctx.translate(0, h);
-        ctx.rotate(-90 * Math.PI / 180);
-        drawTextContent(h, w);
-      } else {
-        drawTextContent(w, h);
-      }
-
-      ctx.restore();
     }
 
     function drawTextContent(w, h) {
