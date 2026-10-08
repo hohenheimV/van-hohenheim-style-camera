@@ -1,0 +1,20 @@
+{
+  "name": "VHS Cam",
+  "short_name": "VHS Cam",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#121212",
+  "icons": [
+    {
+      "src": "https://avatars.githubusercontent.com/u/102128097?v=4&size=64",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://avatars.githubusercontent.com/u/102128097?v=4",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
