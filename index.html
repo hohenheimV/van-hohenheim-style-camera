@@ -1,198 +1,622 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VHS Cam Prototype</title>
+  <style>
+    @import url('https://fonts.cdnfonts.com/css/vcr-osd-mono');
 
-    <title>ArcGIS Map Test</title>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #fff;
+      font-family: 'VCR OSD Mono', monospace;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
 
-    <!-- ArcGIS CSS -->
-    <link rel="stylesheet"
-          href="https://js.arcgis.com/4.13/esri/css/main.css">
+    /* Force Landscape Notification on Portrait Mobile */
+    @media screen and (orientation: portrait) and (max-width: 768px) {
+      body::before {
+        content: "PLEASE ROTATE YOUR DEVICE TO LANDSCAPE ↻";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.95);
+        color: #e6c229;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+        font-size: 16px;
+        z-index: 9999;
+      }
+    }
 
-    <!-- ArcGIS JavaScript API -->
-    <script src="https://js.arcgis.com/4.13/"></script>
+    .viewport-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #050505;
+      overflow: hidden;
+    }
 
-    <style>
-        html,
-        body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
+    canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.35) 50%
+      );
+      background-size: 100% 4px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.8);
+    }
 
-        #viewDiv {
-            width: 100%;
-            height: 500px;
-        }
-    </style>
+    .controls {
+      width: 100%;
+      background: #121212;
+      padding: 8px 12px;
+      border-top: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 10;
+      max-height: 45vh;
+      overflow-y: auto;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button, select, input[type="date"], input[type="time"], input[type="text"] {
+      padding: 5px 8px;
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 3px;
+      font-family: 'VCR OSD Mono', monospace;
+      font-size: 11px;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:active {
+      background: #444;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #stopCamBtn {
+      background: #444;
+    }
+
+    #recBtn.recording {
+      background: #d32f2f;
+      color: white;
+      border-color: #f44336;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    label {
+      font-size: 11px;
+      color: #aaa;
+    }
+
+    .zoom-display {
+      font-size: 11px;
+      min-width: 32px;
+      text-align: center;
+      color: #00ffcc;
+    }
+  </style>
 </head>
-
 <body>
 
-    <h3>ArcGIS Map Test</h3>
+  <!-- Viewport -->
+  <div class="viewport-container">
+    <canvas id="vhsCanvas"></canvas>
+  </div>
 
-    <div id="viewDiv"></div>
+  <!-- Control Panel -->
+  <div class="controls">
+    <div class="control-row">
+      <div class="control-group">
+        <button id="startBtn">Start Cam</button>
+        <button id="stopCamBtn" disabled>Stop Cam</button>
+        <button id="recBtn" disabled>Start Rec</button>
+      </div>
 
+      <div class="control-group">
+        <label for="resSelect">Res:</label>
+        <select id="resSelect">
+          <option value="480p">640x480 (480p)</option>
+          <option value="320p">426x320 (320p)</option>
+        </select>
+      </div>
 
-    <script>
+      <div class="control-group">
+        <label for="aspectSelect">Ratio:</label>
+        <select id="aspectSelect">
+          <option value="4:3">4:3 Retro</option>
+          <option value="16:9">16:9 Wide</option>
+        </select>
+      </div>
 
-        console.log("TEST 1 - JavaScript loaded");
+      <div class="control-group">
+        <label>Zoom:</label>
+        <button id="zoomOutBtn" disabled>-</button>
+        <span id="zoomVal" class="zoom-display">1.0x</span>
+        <button id="zoomInBtn" disabled>+</button>
+        <button id="zoomResetBtn" disabled>Reset</button>
+      </div>
+    </div>
 
-        require([
-            "esri/Map",
-            "esri/views/MapView",
-            "esri/Graphic",
-            "esri/layers/GraphicsLayer"
-        ], function (
-            Map,
-            MapView,
-            Graphic,
-            GraphicsLayer
-        ) {
+    <!-- Date/Time Settings -->
+    <div class="control-row">
+      <div class="control-group">
+        <label><input type="checkbox" id="dateToggle" checked> Timestamp</label>
+      </div>
+      <div class="control-group">
+        <label for="formatSelect">Format:</label>
+        <select id="formatSelect">
+          <option value="vhs_classic">PM 09 : 22 : 05 / 03 . OCT . 11</option>
+          <option value="ntsc">OCT 03 2011 / 09:22:05 PM</option>
+          <option value="pal">03/10/2011 / 21:22:05</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="customDate">Date:</label>
+        <input type="date" id="customDate">
+      </div>
+      <div class="control-group">
+        <label for="customTime">Time:</label>
+        <input type="time" id="customTime" step="1">
+      </div>
+      <div class="control-group">
+        <button id="resetDateTimeBtn">Reset Time</button>
+      </div>
+    </div>
 
-            console.log("TEST 2 - ArcGIS modules loaded");
+    <!-- Retro Effects & Audio Options -->
+    <div class="control-row">
+      <div class="control-group">
+        <label for="labelInput">Label:</label>
+        <input type="text" id="labelInput" value="PLAY" maxlength="12" style="width:70px;">
+      </div>
+      <div class="control-group">
+        <label><input type="checkbox" id="glitchToggle" checked> Color Shift</label>
+      </div>
+      <div class="control-group">
+        <label><input type="checkbox" id="grainToggle" checked> Tape Grain</label>
+      </div>
+      <div class="control-group">
+        <label><input type="checkbox" id="trackingToggle" checked> VCR Tracking</label>
+      </div>
+      <div class="control-group">
+        <!-- Mic muted by default on start -->
+        <label><input type="checkbox" id="micToggle"> Mic</label>
+      </div>
+    </div>
+  </div>
 
+  <video id="webcam" autoplay playsinline style="display:none;"></video>
 
-            // ==========================================
-            // Graphics layer
-            // ==========================================
+  <script>
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('vhsCanvas');
+    const ctx = canvas.getContext('2d');
 
-            var graphicsLayer = new GraphicsLayer();
+    // Controls
+    const startBtn = document.getElementById('startBtn');
+    const stopCamBtn = document.getElementById('stopCamBtn');
+    const recBtn = document.getElementById('recBtn');
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+    const zoomVal = document.getElementById('zoomVal');
 
+    // Toggles & Formatting
+    const resSelect = document.getElementById('resSelect');
+    const aspectSelect = document.getElementById('aspectSelect');
+    const labelInput = document.getElementById('labelInput');
+    const dateToggle = document.getElementById('dateToggle');
+    const glitchToggle = document.getElementById('glitchToggle');
+    const grainToggle = document.getElementById('grainToggle');
+    const trackingToggle = document.getElementById('trackingToggle');
+    const formatSelect = document.getElementById('formatSelect');
+    const customDate = document.getElementById('customDate');
+    const customTime = document.getElementById('customTime');
+    const resetDateTimeBtn = document.getElementById('resetDateTimeBtn');
+    const micToggle = document.getElementById('micToggle');
 
-            // ==========================================
-            // Create map
-            // ==========================================
+    let zoomLevel = 1.0;
+    let mediaRecorder;
+    let recordedChunks = [];
+    let isRecording = false;
+    let animFrameId = null;
 
-            var map = new Map({
-                basemap: "satellite",
-                layers: [
-                    graphicsLayer
-                ]
-            });
+    // Canvas Native Resolution State
+    let canvasWidth = 640;
+    let canvasHeight = 480;
 
-            console.log("TEST 3 - Map created");
+    // Dynamic Time Base Offset
+    let baseTimeOffset = 0;
 
+    // Media & Audio Context
+    let mediaStream = null;
+    let audioCtx = null;
+    let micStreamSource = null;
+    let processedAudioDestination = null;
 
-            // ==========================================
-            // Create MapView
-            // ==========================================
+    function updateCanvasDimensions() {
+      const is320p = resSelect.value === '320p';
+      const is16by9 = aspectSelect.value === '16:9';
 
-            var view = new MapView({
-                container: "viewDiv",
-                map: map,
+      if (is320p) {
+        canvasWidth = is16by9 ? 568 : 426;
+        canvasHeight = 320;
+      } else {
+        canvasWidth = is16by9 ? 854 : 640;
+        canvasHeight = 480;
+      }
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+    }
 
-                // Kuala Lumpur
-                center: [
-                    101.68833,
-                    3.15475
-                ],
+    resSelect.addEventListener('change', updateCanvasDimensions);
+    aspectSelect.addEventListener('change', updateCanvasDimensions);
+    updateCanvasDimensions();
 
-                zoom: 10
-            });
+    function setDefaultDate2011() {
+      const now = new Date();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      customDate.value = `2011-${month}-${day}`;
+      
+      const hours = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      const secs = String(now.getSeconds()).padStart(2, '0');
+      customTime.value = `${hours}:${mins}:${secs}`;
 
-            console.log("TEST 4 - MapView created");
+      updateBaseTimeOffset();
+    }
 
+    function updateBaseTimeOffset() {
+      if (!customDate.value || !customTime.value) return;
+      const [y, m, d] = customDate.value.split('-');
+      const [h, min, s] = customTime.value.split(':');
+      const selectedDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(h), parseInt(min), parseInt(s || 0));
+      baseTimeOffset = selectedDate.getTime() - Date.now();
+    }
 
-            // ==========================================
-            // Wait until map is ready
-            // ==========================================
+    customDate.addEventListener('change', updateBaseTimeOffset);
+    customTime.addEventListener('change', updateBaseTimeOffset);
+    resetDateTimeBtn.addEventListener('click', setDefaultDate2011);
+    setDefaultDate2011();
 
-            view.when(function () {
+    // Zoom Handlers
+    function updateZoom(newZoom) {
+      zoomLevel = Math.min(Math.max(newZoom, 1.0), 3.0);
+      zoomVal.textContent = zoomLevel.toFixed(1) + 'x';
+    }
+    zoomInBtn.addEventListener('click', () => updateZoom(zoomLevel + 0.2));
+    zoomOutBtn.addEventListener('click', () => updateZoom(zoomLevel - 0.2));
+    zoomResetBtn.addEventListener('click', () => updateZoom(1.0));
 
-                console.log("TEST 5 - MAP SUCCESS");
-
-                // Initial marker
-                showMarker(
-                    3.15475,
-                    101.68833
-                );
-
-            }, function (error) {
-
-                console.error(
-                    "MAP FAILED:",
-                    error
-                );
-
-            });
-
-
-            // ==========================================
-            // Function to display marker
-            // ==========================================
-
-            function showMarker(latitude, longitude) {
-
-                var point = {
-                    type: "point",
-                    longitude: longitude,
-                    latitude: latitude
-                };
-
-
-                var graphic = new Graphic({
-
-                    geometry: point,
-
-                    symbol: {
-                        type: "simple-marker",
-
-                        color: "red",
-
-                        size: 10,
-
-                        outline: {
-                            color: "white",
-                            width: 1
-                        }
-                    }
-
-                });
-
-
-                graphicsLayer.removeAll();
-
-                graphicsLayer.add(graphic);
-
-
-                console.log(
-                    "Marker:",
-                    latitude,
-                    longitude
-                );
-            }
-
-
-            // ==========================================
-            // Click map
-            // ==========================================
-
-            view.on("click", function (event) {
-
-                var point = view.toMap({
-                    x: event.x,
-                    y: event.y
-                });
-
-
-                console.log(
-                    "CLICK:",
-                    point.latitude,
-                    point.longitude
-                );
-
-
-                showMarker(
-                    point.latitude,
-                    point.longitude
-                );
-
-            });
-
+    // Hardware Control
+    startBtn.addEventListener('click', async () => {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: 1280, height: 720 },
+          audio: true
         });
+        
+        // Mute mic track immediately on start (Default Muted)
+        if (mediaStream.getAudioTracks().length > 0) {
+          mediaStream.getAudioTracks()[0].enabled = micToggle.checked;
+        }
 
-    </script>
+        video.srcObject = mediaStream;
+        video.play();
 
+        setupAudioPipeline(mediaStream);
+
+        startBtn.disabled = true;
+        stopCamBtn.disabled = false;
+        recBtn.disabled = false;
+        zoomInBtn.disabled = false;
+        zoomOutBtn.disabled = false;
+        zoomResetBtn.disabled = false;
+
+        processFrame();
+      } catch (err) {
+        alert("Camera access failed: " + err.message);
+      }
+    });
+
+    stopCamBtn.addEventListener('click', stopCameraHardware);
+
+    function stopCameraHardware() {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      if (audioCtx) {
+        audioCtx.close();
+        audioCtx = null;
+      }
+
+      video.srcObject = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      startBtn.disabled = false;
+      stopCamBtn.disabled = true;
+      recBtn.disabled = true;
+      zoomInBtn.disabled = true;
+      zoomOutBtn.disabled = true;
+      zoomResetBtn.disabled = true;
+    }
+
+    // Audio Pipeline with Retro Filter
+    function setupAudioPipeline(stream) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      processedAudioDestination = audioCtx.createMediaStreamDestination();
+
+      const lowPassFilter = audioCtx.createBiquadFilter();
+      lowPassFilter.type = 'lowpass';
+      lowPassFilter.frequency.setValueAtTime(2500, audioCtx.currentTime);
+
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.setValueAtTime(1.2, audioCtx.currentTime);
+
+      lowPassFilter.connect(gainNode);
+      gainNode.connect(processedAudioDestination);
+
+      if (stream.getAudioTracks().length > 0) {
+        micStreamSource = audioCtx.createMediaStreamSource(stream);
+        micStreamSource.connect(lowPassFilter);
+      }
+    }
+
+    micToggle.addEventListener('change', (e) => {
+      if (mediaStream && mediaStream.getAudioTracks().length > 0) {
+        mediaStream.getAudioTracks()[0].enabled = e.target.checked;
+      }
+    });
+
+    // Main Canvas Render Loop
+    function processFrame() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        const sw = canvasWidth / zoomLevel;
+        const sh = canvasHeight / zoomLevel;
+        const sx = (canvasWidth - sw) / 2;
+        const sy = (canvasHeight - sh) / 2;
+
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvasWidth, canvasHeight);
+
+        // Effect 1: RGB Color Shift Glitch
+        if (glitchToggle.checked) {
+          const frameData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+          const data = frameData.data;
+
+          for (let i = 0; i < data.length; i += 4) {
+            if (i + 12 < data.length) {
+              data[i] = data[i + 12];
+            }
+            data[i + 1] = data[i + 1] * 0.88;
+          }
+          ctx.putImageData(frameData, 0, 0);
+        }
+
+        // Effect 2: Animated Tape Grain / White Noise
+        if (grainToggle.checked) {
+          renderTapeGrain();
+        }
+
+        // Effect 3: VCR Tracking Distortion
+        if (trackingToggle.checked) {
+          renderTrackingDistortion();
+        }
+
+        // Overlays & Text
+        renderOverlays();
+      }
+      animFrameId = requestAnimationFrame(processFrame);
+    }
+
+    function renderTapeGrain() {
+      const imgData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+      const data = imgData.data;
+      const amount = 18; // Grain intensity
+
+      for (let i = 0; i < data.length; i += 4) {
+        if (Math.random() < 0.15) {
+          const noise = (Math.random() - 0.5) * amount;
+          data[i] = Math.min(255, Math.max(0, data[i] + noise));
+          data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
+          data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    function renderTrackingDistortion() {
+      if (Math.random() < 0.35) {
+        const jitterY = canvasHeight - Math.floor(Math.random() * 35) - 10;
+        const jitterHeight = Math.floor(Math.random() * 8) + 2;
+        const shiftX = (Math.random() - 0.5) * 16;
+
+        const sliceData = ctx.getImageData(0, jitterY, canvasWidth, jitterHeight);
+        ctx.putImageData(sliceData, shiftX, jitterY);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.fillRect(0, jitterY, canvasWidth, 1);
+      }
+    }
+
+    function renderOverlays() {
+      const customText = labelInput.value.trim().toUpperCase();
+      
+      // Top Left Label
+      if (customText) {
+        ctx.font = '22px "VCR OSD Mono", monospace';
+        ctx.fillStyle = '#00ffcc';
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 4;
+        ctx.fillText(isRecording ? `REC ${customText}` : customText, 25, 45);
+      }
+
+      // Bottom Left Dynamic Timestamp
+      if (dateToggle.checked) {
+        const currentDynamicTime = new Date(Date.now() + baseTimeOffset);
+        const formatted = getFormattedDateTime(currentDynamicTime, formatSelect.value);
+
+        ctx.font = '20px "VCR OSD Mono", monospace';
+        ctx.fillStyle = '#e6c229'; // Classic VHS Yellow
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 4;
+
+        ctx.fillText(formatted.timeStr, 25, canvasHeight - 55);
+        ctx.fillText(formatted.dateStr, 25, canvasHeight - 28);
+      }
+    }
+
+    function getFormattedDateTime(d, style) {
+      const monthsShort = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+      const yrFull = d.getFullYear();
+      const yr2Digit = String(yrFull).slice(-2);
+      const moName = monthsShort[d.getMonth()];
+      const dayPad = String(d.getDate()).padStart(2, '0');
+      const dayNum = d.getDate();
+
+      let hours = d.getHours();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const hours12 = String(hours % 12 || 12).padStart(2, '0');
+      const minsPad = String(d.getMinutes()).padStart(2, '0');
+      const secsPad = String(d.getSeconds()).padStart(2, '0');
+
+      if (style === 'ntsc') {
+        return {
+          timeStr: `${hours12}:${minsPad}:${secsPad} ${ampm}`,
+          dateStr: `${moName} ${dayPad} ${yrFull}`
+        };
+      } else if (style === 'pal') {
+        return {
+          timeStr: `${String(hours).padStart(2, '0')}:${minsPad}:${secsPad}`,
+          dateStr: `${dayPad}/${String(d.getMonth() + 1).padStart(2, '0')}/${yrFull}`
+        };
+      } else {
+        return {
+          timeStr: `${ampm} ${hours12} : ${minsPad} : ${secsPad}`,
+          dateStr: `${dayNum} . ${moName} . ${yr2Digit}`
+        };
+      }
+    }
+
+    // Recording Logic
+    recBtn.addEventListener('click', () => {
+      if (!isRecording) startRecording();
+      else stopRecording();
+    });
+
+    function startRecording() {
+      recordedChunks = [];
+      const canvasStream = canvas.captureStream(30);
+      
+      const tracks = [...canvasStream.getVideoTracks()];
+      if (processedAudioDestination && processedAudioDestination.stream.getAudioTracks().length > 0) {
+        tracks.push(...processedAudioDestination.stream.getAudioTracks());
+      }
+
+      const combinedStream = new MediaStream(tracks);
+
+      let options = { mimeType: 'video/webm;codecs=vp8,opus' };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'video/mp4' };
+      }
+
+      try {
+        mediaRecorder = new MediaRecorder(combinedStream, options);
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(combinedStream);
+      }
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = saveVideo;
+
+      mediaRecorder.start();
+      isRecording = true;
+      recBtn.textContent = 'Stop & Save';
+      recBtn.classList.add('recording');
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      isRecording = false;
+      recBtn.textContent = 'Start Rec';
+      recBtn.classList.remove('recording');
+    }
+
+    function saveVideo() {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `vhs_${Date.now()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        stopCameraHardware();
+      }, 100);
+    }
+  </script>
 </body>
 </html>
