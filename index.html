@@ -23,27 +23,6 @@
       overflow: hidden;
     }
 
-    /* Force Landscape Notification on Portrait Mobile */
-    @media screen and (orientation: portrait) and (max-width: 768px) {
-      body::before {
-        content: "PLEASE ROTATE YOUR DEVICE TO LANDSCAPE ↻";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.95);
-        color: #e6c229;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 20px;
-        font-size: 16px;
-        z-index: 9999;
-      }
-    }
-
     .viewport-container {
       flex: 1;
       position: relative;
@@ -66,6 +45,7 @@
       );
       background-size: 100% 4px;
       box-shadow: 0 0 20px rgba(0,0,0,0.8);
+      transition: transform 0.3s ease;
     }
 
     .controls {
@@ -93,6 +73,11 @@
       display: flex;
       align-items: center;
       gap: 6px;
+    }
+
+    /* Transition effect for smooth rotation when rotating device */
+    button, select, input, label, span {
+      transition: transform 0.3s ease;
     }
 
     button, select, input[type="date"], input[type="time"], input[type="text"] {
@@ -145,7 +130,14 @@
       min-width: 32px;
       text-align: center;
       color: #00ffcc;
+      display: inline-block;
     }
+
+    /* CSS classes for button rotation */
+    .rotate-0 { transform: rotate(0deg); }
+    .rotate-90 { transform: rotate(90deg); }
+    .rotate-180 { transform: rotate(180deg); }
+    .rotate-270 { transform: rotate(270deg); }
   </style>
 </head>
 <body>
@@ -159,80 +151,82 @@
   <div class="controls">
     <div class="control-row">
       <div class="control-group">
-        <button id="startBtn">Start Cam</button>
-        <button id="stopCamBtn" disabled>Stop Cam</button>
-        <button id="recBtn" disabled>Start Rec</button>
+        <button id="startBtn" class="rotatable">Start Cam</button>
+        <button id="stopCamBtn" class="rotatable" disabled>Stop Cam</button>
+        <button id="recBtn" class="rotatable" disabled>Start Rec</button>
       </div>
 
       <div class="control-group">
-        <label for="resSelect">Res:</label>
-        <select id="resSelect">
+        <label for="resSelect" class="rotatable">Res:</label>
+        <select id="resSelect" class="rotatable">
           <option value="480p">640x480 (480p)</option>
           <option value="320p">426x320 (320p)</option>
         </select>
       </div>
 
       <div class="control-group">
-        <label for="aspectSelect">Ratio:</label>
-        <select id="aspectSelect">
+        <label for="aspectSelect" class="rotatable">Ratio:</label>
+        <select id="aspectSelect" class="rotatable">
           <option value="4:3">4:3 Retro</option>
           <option value="16:9">16:9 Wide</option>
         </select>
       </div>
 
       <div class="control-group">
-        <label>Zoom:</label>
-        <button id="zoomOutBtn" disabled>-</button>
-        <span id="zoomVal" class="zoom-display">1.0x</span>
-        <button id="zoomInBtn" disabled>+</button>
-        <button id="zoomResetBtn" disabled>Reset</button>
+        <label class="rotatable">Zoom:</label>
+        <button id="zoomOutBtn" class="rotatable" disabled>-</button>
+        <span id="zoomVal" class="zoom-display rotatable">1.0x</span>
+        <button id="zoomInBtn" class="rotatable" disabled>+</button>
+        <button id="zoomResetBtn" class="rotatable" disabled>Reset</button>
       </div>
     </div>
 
     <!-- Date/Time Settings -->
     <div class="control-row">
       <div class="control-group">
-        <label><input type="checkbox" id="dateToggle" checked> Timestamp</label>
+        <label class="rotatable"><input type="checkbox" id="dateToggle" checked> Timestamp</label>
       </div>
       <div class="control-group">
-        <label for="formatSelect">Format:</label>
-        <select id="formatSelect">
+        <label for="formatSelect" class="rotatable">Format:</label>
+        <select id="formatSelect" class="rotatable">
           <option value="vhs_classic">PM 09 : 22 : 05 / 03 . OCT . 11</option>
           <option value="ntsc">OCT 03 2011 / 09:22:05 PM</option>
           <option value="pal">03/10/2011 / 21:22:05</option>
         </select>
       </div>
       <div class="control-group">
-        <label for="customDate">Date:</label>
-        <input type="date" id="customDate">
+        <label for="customDate" class="rotatable">Date:</label>
+        <input type="date" id="customDate" class="rotatable">
       </div>
       <div class="control-group">
-        <label for="customTime">Time:</label>
-        <input type="time" id="customTime" step="1">
+        <label for="customTime" class="rotatable">Time:</label>
+        <input type="time" id="customTime" step="1" class="rotatable">
       </div>
       <div class="control-group">
-        <button id="resetDateTimeBtn">Reset Time</button>
+        <button id="resetDateTimeBtn" class="rotatable">Reset Time</button>
       </div>
     </div>
 
-    <!-- Retro Effects & Audio Options -->
+    <!-- Retro Effects & Sensor Options -->
     <div class="control-row">
       <div class="control-group">
-        <label for="labelInput">Label:</label>
-        <input type="text" id="labelInput" value="PLAY" maxlength="12" style="width:70px;">
+        <label for="labelInput" class="rotatable">Label:</label>
+        <input type="text" id="labelInput" value="PLAY" maxlength="12" style="width:70px;" class="rotatable">
       </div>
       <div class="control-group">
-        <label><input type="checkbox" id="glitchToggle" checked> Color Shift</label>
+        <label class="rotatable"><input type="checkbox" id="glitchToggle" checked> Color Shift</label>
       </div>
       <div class="control-group">
-        <label><input type="checkbox" id="grainToggle" checked> Tape Grain</label>
+        <label class="rotatable"><input type="checkbox" id="grainToggle" checked> Tape Grain</label>
       </div>
       <div class="control-group">
-        <label><input type="checkbox" id="trackingToggle" checked> VCR Tracking</label>
+        <label class="rotatable"><input type="checkbox" id="trackingToggle" checked> VCR Tracking</label>
       </div>
       <div class="control-group">
-        <!-- Mic muted by default on start -->
-        <label><input type="checkbox" id="micToggle"> Mic</label>
+        <label class="rotatable"><input type="checkbox" id="micToggle"> Mic</label>
+      </div>
+      <div class="control-group">
+        <button id="sensorBtn" class="rotatable" style="display:none;">Enable Sensor</button>
       </div>
     </div>
   </div>
@@ -266,12 +260,16 @@
     const customTime = document.getElementById('customTime');
     const resetDateTimeBtn = document.getElementById('resetDateTimeBtn');
     const micToggle = document.getElementById('micToggle');
+    const sensorBtn = document.getElementById('sensorBtn');
 
     let zoomLevel = 1.0;
     let mediaRecorder;
     let recordedChunks = [];
     let isRecording = false;
     let animFrameId = null;
+
+    // Orientation Angle (0, 90, 180, 270)
+    let currentRotationAngle = 0;
 
     // Canvas Native Resolution State
     let canvasWidth = 640;
@@ -285,6 +283,55 @@
     let audioCtx = null;
     let micStreamSource = null;
     let processedAudioDestination = null;
+
+    // Device Sensor Orientation Handling
+    function handleOrientation(event) {
+      const beta = event.beta;   // Front-to-back tilt [-180, 180]
+      const gamma = event.gamma; // Left-to-right tilt [-90, 90]
+
+      let newAngle = 0;
+
+      if (gamma > 45) {
+        newAngle = 90; // Rotated right
+      } else if (gamma < -45) {
+        newAngle = 270; // Rotated left
+      } else if (beta < -45) {
+        newAngle = 180; // Upside down
+      } else {
+        newAngle = 0; // Standard portrait
+      }
+
+      if (newAngle !== currentRotationAngle) {
+        currentRotationAngle = newAngle;
+        applyUIRotation(newAngle);
+      }
+    }
+
+    function applyUIRotation(angle) {
+      const rotatableElements = document.querySelectorAll('.rotatable');
+      rotatableElements.forEach(el => {
+        el.classList.remove('rotate-0', 'rotate-90', 'rotate-180', 'rotate-270');
+        el.classList.add(`rotate-${angle}`);
+      });
+    }
+
+    // Check & Request Orientation Permissions (for iOS)
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      sensorBtn.style.display = 'inline-block';
+      sensorBtn.addEventListener('click', async () => {
+        try {
+          const response = await DeviceOrientationEvent.requestPermission();
+          if (response === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation);
+            sensorBtn.style.display = 'none';
+          }
+        } catch (e) {
+          console.log(e);
+        }
+      });
+    } else {
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
 
     function updateCanvasDimensions() {
       const is320p = resSelect.value === '320p';
@@ -427,47 +474,70 @@
     // Main Canvas Render Loop
     function processFrame() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        const sw = canvasWidth / zoomLevel;
-        const sh = canvasHeight / zoomLevel;
-        const sx = (canvasWidth - sw) / 2;
-        const sy = (canvasHeight - sh) / 2;
-
-        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvasWidth, canvasHeight);
-
-        // Effect 1: RGB Color Shift Glitch
-        if (glitchToggle.checked) {
-          const frameData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
-          const data = frameData.data;
-
-          for (let i = 0; i < data.length; i += 4) {
-            if (i + 12 < data.length) {
-              data[i] = data[i + 12];
-            }
-            data[i + 1] = data[i + 1] * 0.88;
-          }
-          ctx.putImageData(frameData, 0, 0);
+        ctx.save();
+        
+        // Handle canvas rotation for video and overlay alignment based on sensor
+        if (currentRotationAngle === 90) {
+          ctx.translate(canvasWidth, 0);
+          ctx.rotate(90 * Math.PI / 180);
+          renderVideoFrame(canvasHeight, canvasWidth);
+          applyEffectsAndOverlays(canvasHeight, canvasWidth);
+        } else if (currentRotationAngle === 270) {
+          ctx.translate(0, canvasHeight);
+          ctx.rotate(-90 * Math.PI / 180);
+          renderVideoFrame(canvasHeight, canvasWidth);
+          applyEffectsAndOverlays(canvasHeight, canvasWidth);
+        } else {
+          renderVideoFrame(canvasWidth, canvasHeight);
+          applyEffectsAndOverlays(canvasWidth, canvasHeight);
         }
 
-        // Effect 2: Animated Tape Grain / White Noise
-        if (grainToggle.checked) {
-          renderTapeGrain();
-        }
-
-        // Effect 3: VCR Tracking Distortion
-        if (trackingToggle.checked) {
-          renderTrackingDistortion();
-        }
-
-        // Overlays & Text
-        renderOverlays();
+        ctx.restore();
       }
       animFrameId = requestAnimationFrame(processFrame);
     }
 
-    function renderTapeGrain() {
-      const imgData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+    function renderVideoFrame(w, h) {
+      const sw = w / zoomLevel;
+      const sh = h / zoomLevel;
+      const sx = (w - sw) / 2;
+      const sy = (h - sh) / 2;
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
+    }
+
+    function applyEffectsAndOverlays(w, h) {
+      // Effect 1: RGB Color Shift Glitch
+      if (glitchToggle.checked) {
+        const frameData = ctx.getImageData(0, 0, w, h);
+        const data = frameData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          if (i + 12 < data.length) {
+            data[i] = data[i + 12];
+          }
+          data[i + 1] = data[i + 1] * 0.88;
+        }
+        ctx.putImageData(frameData, 0, 0);
+      }
+
+      // Effect 2: Animated Tape Grain / White Noise
+      if (grainToggle.checked) {
+        renderTapeGrain(w, h);
+      }
+
+      // Effect 3: VCR Tracking Distortion
+      if (trackingToggle.checked) {
+        renderTrackingDistortion(w, h);
+      }
+
+      // Overlays & Text
+      renderOverlays(w, h);
+    }
+
+    function renderTapeGrain(w, h) {
+      const imgData = ctx.getImageData(0, 0, w, h);
       const data = imgData.data;
-      const amount = 18; // Grain intensity
+      const amount = 18;
 
       for (let i = 0; i < data.length; i += 4) {
         if (Math.random() < 0.15) {
@@ -480,21 +550,21 @@
       ctx.putImageData(imgData, 0, 0);
     }
 
-    function renderTrackingDistortion() {
+    function renderTrackingDistortion(w, h) {
       if (Math.random() < 0.35) {
-        const jitterY = canvasHeight - Math.floor(Math.random() * 35) - 10;
+        const jitterY = h - Math.floor(Math.random() * 35) - 10;
         const jitterHeight = Math.floor(Math.random() * 8) + 2;
         const shiftX = (Math.random() - 0.5) * 16;
 
-        const sliceData = ctx.getImageData(0, jitterY, canvasWidth, jitterHeight);
+        const sliceData = ctx.getImageData(0, jitterY, w, jitterHeight);
         ctx.putImageData(sliceData, shiftX, jitterY);
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-        ctx.fillRect(0, jitterY, canvasWidth, 1);
+        ctx.fillRect(0, jitterY, w, 1);
       }
     }
 
-    function renderOverlays() {
+    function renderOverlays(w, h) {
       const customText = labelInput.value.trim().toUpperCase();
       
       // Top Left Label
@@ -516,8 +586,8 @@
         ctx.shadowColor = 'black';
         ctx.shadowBlur = 4;
 
-        ctx.fillText(formatted.timeStr, 25, canvasHeight - 55);
-        ctx.fillText(formatted.dateStr, 25, canvasHeight - 28);
+        ctx.fillText(formatted.timeStr, 25, h - 55);
+        ctx.fillText(formatted.dateStr, 25, h - 28);
       }
     }
 
