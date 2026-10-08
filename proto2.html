@@ -1,0 +1,3406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
+  <title>VHS Camcorder</title>
+
+  <style>
+    @import url('https://fonts.cdnfonts.com/css/vcr-osd-mono');
+
+    :root {
+      --bg: #050505;
+      --panel: #111;
+      --panel2: #181818;
+      --button: #222;
+      --button-hover: #303030;
+      --border: #3b3b3b;
+      --text: #eee;
+      --muted: #888;
+      --green: #00ff88;
+      --cyan: #00ffcc;
+      --yellow: #e6c229;
+      --red: #ff3030;
+      --orange: #ff9800;
+      --blue: #0288d1;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      color: var(--text);
+      font-family: 'VCR OSD Mono', monospace;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    button,
+    select,
+    input {
+      font-family: inherit;
+    }
+
+    button {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* =========================================================
+       VIEWPORT
+       ========================================================= */
+
+    .viewport-container {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background:
+        radial-gradient(
+          ellipse at center,
+          #111 0%,
+          #050505 60%,
+          #000 100%
+        );
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      background: #000;
+      box-shadow:
+        0 0 30px rgba(0, 0, 0, 0.9),
+        0 0 80px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Subtle monitor scanlines */
+    .viewport-container::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.12;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 2px,
+          rgba(255,255,255,.06) 3px,
+          transparent 4px
+        );
+      mix-blend-mode: screen;
+    }
+
+    /* =========================================================
+       SNAPSHOT FLASH
+       ========================================================= */
+
+    .snapshot-flash {
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    .snapshot-flash.flash {
+      animation: photoFlash .12s linear;
+    }
+
+    @keyframes photoFlash {
+      0% { opacity: 0; }
+      35% { opacity: .9; }
+      100% { opacity: 0; }
+    }
+
+    /* =========================================================
+       CONTROL PANEL
+       ========================================================= */
+
+    .controls {
+      flex: 0 0 auto;
+      width: 100%;
+      max-height: 48vh;
+      overflow-y: auto;
+      padding: 10px;
+      background:
+        linear-gradient(#151515, #0d0d0d);
+      border-top: 1px solid #444;
+      box-shadow: 0 -8px 30px rgba(0,0,0,.55);
+      z-index: 20;
+      scrollbar-width: thin;
+      scrollbar-color: #555 #111;
+    }
+
+    .controls::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .controls::-webkit-scrollbar-track {
+      background: #111;
+    }
+
+    .controls::-webkit-scrollbar-thumb {
+      background: #444;
+    }
+
+    .panel-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .panel-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .section {
+      padding: 8px;
+      background: #101010;
+      border: 1px solid #292929;
+      border-radius: 4px;
+    }
+
+    .section-title {
+      width: 100%;
+      margin-bottom: 6px;
+      color: #777;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    /* =========================================================
+       BUTTONS
+       ========================================================= */
+
+    button,
+    select,
+    input[type="date"],
+    input[type="time"],
+    input[type="text"] {
+      min-height: 34px;
+      padding: 6px 9px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--button);
+      color: #eee;
+      font-size: 11px;
+      outline: none;
+    }
+
+    button {
+      cursor: pointer;
+      transition:
+        background .08s ease,
+        border-color .08s ease,
+        transform .05s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--button-hover);
+      border-color: #666;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+      background: #444;
+    }
+
+    button:focus-visible,
+    select:focus-visible,
+    input:focus-visible {
+      outline: 1px solid var(--cyan);
+      outline-offset: 2px;
+    }
+
+    button:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    .power-btn {
+      background: #252525;
+      border-color: #555;
+      font-weight: bold;
+    }
+
+    .record-btn {
+      min-width: 112px;
+      background: #241010;
+      border-color: #713333;
+      color: #ff6666;
+      font-weight: bold;
+    }
+
+    .record-btn.recording {
+      background: #a80000;
+      border-color: #ff4040;
+      color: #fff;
+      animation: recPulse 1.2s infinite;
+    }
+
+    @keyframes recPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .55; }
+    }
+
+    .pause-btn.paused {
+      background: #9a5700;
+      border-color: #ffad32;
+      color: #fff;
+    }
+
+    .photo-btn {
+      min-width: 92px;
+      background: #15351a;
+      border-color: #33753c;
+      color: #72ff82;
+      font-weight: bold;
+    }
+
+    .rotate-btn {
+      background: #08283b;
+      border-color: #075f89;
+      color: #57caff;
+    }
+
+    .danger-btn {
+      background: #292020;
+      color: #ff8888;
+    }
+
+    /* =========================================================
+       ZOOM
+       ========================================================= */
+
+    .zoom-area {
+      flex: 1 1 280px;
+      min-width: 260px;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .zoom-button {
+      width: 40px;
+      min-width: 40px;
+      height: 38px;
+      font-size: 17px;
+      font-weight: bold;
+    }
+
+    .zoom-value {
+      width: 50px;
+      text-align: center;
+      color: var(--cyan);
+      font-size: 11px;
+    }
+
+    .zoom-bar {
+      flex: 1;
+      position: relative;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      min-width: 100px;
+    }
+
+    .zoom-track {
+      width: 100%;
+      height: 3px;
+      background: #3b3b3b;
+      position: relative;
+    }
+
+    .zoom-track::before {
+      content: "W";
+      position: absolute;
+      left: -14px;
+      top: -7px;
+      font-size: 9px;
+      color: #777;
+    }
+
+    .zoom-track::after {
+      content: "T";
+      position: absolute;
+      right: -14px;
+      top: -7px;
+      font-size: 9px;
+      color: #777;
+    }
+
+    .zoom-marker {
+      position: absolute;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 7px rgba(0,255,204,.6);
+      transform: translate(-50%, -50%);
+    }
+
+    /* =========================================================
+       CONTROLS / FORM
+       ========================================================= */
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    label {
+      color: #999;
+      font-size: 10px;
+    }
+
+    select {
+      min-width: 105px;
+    }
+
+    input[type="text"] {
+      width: 90px;
+    }
+
+    input[type="date"],
+    input[type="time"] {
+      color-scheme: dark;
+    }
+
+    input[type="checkbox"] {
+      accent-color: var(--cyan);
+      vertical-align: middle;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 7px;
+      background: #181818;
+      border: 1px solid #292929;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .toggle:has(input:checked) {
+      color: var(--cyan);
+      border-color: #275b53;
+      background: #10201e;
+    }
+
+    /* =========================================================
+       TAPE DAMAGE
+       ========================================================= */
+
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 210px;
+    }
+
+    input[type="range"] {
+      width: 130px;
+      accent-color: var(--cyan);
+    }
+
+    .range-value {
+      min-width: 30px;
+      color: var(--cyan);
+      font-size: 10px;
+      text-align: right;
+    }
+
+    /* =========================================================
+       ADVANCED PANEL
+       ========================================================= */
+
+    details {
+      border: 1px solid #292929;
+      background: #101010;
+      border-radius: 4px;
+    }
+
+    summary {
+      padding: 8px;
+      cursor: pointer;
+      color: #aaa;
+      font-size: 10px;
+      user-select: none;
+    }
+
+    details[open] summary {
+      color: var(--cyan);
+      border-bottom: 1px solid #292929;
+    }
+
+    .advanced-content {
+      padding: 8px;
+    }
+
+    /* =========================================================
+       MOBILE
+       ========================================================= */
+
+    @media (max-width: 700px) {
+      .controls {
+        max-height: 52vh;
+        padding: 7px;
+      }
+
+      .section {
+        padding: 7px;
+      }
+
+      .panel-row {
+        gap: 5px;
+      }
+
+      button,
+      select,
+      input[type="date"],
+      input[type="time"],
+      input[type="text"] {
+        min-height: 38px;
+      }
+
+      .record-btn {
+        flex: 1;
+      }
+
+      .photo-btn {
+        flex: 1;
+      }
+
+      .zoom-area {
+        flex-basis: 100%;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =======================================================
+       VIEWPORT
+       ======================================================== -->
+
+  <main class="viewport-container">
+    <canvas id="vhsCanvas"></canvas>
+    <div id="snapshotFlash" class="snapshot-flash"></div>
+  </main>
+
+  <!-- =======================================================
+       CONTROL PANEL
+       ======================================================== -->
+
+  <section class="controls">
+
+    <!-- CAMERA -->
+    <div class="section">
+
+      <div class="section-title">CAMERA</div>
+
+      <div class="panel-row">
+
+        <button
+          id="startBtn"
+          class="power-btn"
+          type="button"
+        >
+          POWER / START
+        </button>
+
+        <button
+          id="stopCamBtn"
+          class="danger-btn"
+          type="button"
+          disabled
+        >
+          STOP
+        </button>
+
+        <button
+          id="recBtn"
+          class="record-btn"
+          type="button"
+          disabled
+        >
+          ● START REC
+        </button>
+
+        <button
+          id="pauseBtn"
+          class="pause-btn"
+          type="button"
+          disabled
+        >
+          PAUSE
+        </button>
+
+        <button
+          id="snapBtn"
+          class="photo-btn"
+          type="button"
+          disabled
+        >
+          PHOTO
+        </button>
+
+        <button
+          id="rotateBtn"
+          class="rotate-btn"
+          type="button"
+        >
+          ROTATE ↻
+        </button>
+
+      </div>
+
+      <!-- ZOOM -->
+      <div class="panel-row">
+
+        <div class="zoom-area">
+
+          <div class="section-title">MOTORIZED ZOOM</div>
+
+          <div class="zoom-controls">
+
+            <button
+              id="zoomOutBtn"
+              class="zoom-button"
+              type="button"
+              disabled
+            >−</button>
+
+            <div class="zoom-bar">
+              <div class="zoom-track">
+                <div
+                  id="zoomMarker"
+                  class="zoom-marker"
+                ></div>
+              </div>
+            </div>
+
+            <button
+              id="zoomInBtn"
+              class="zoom-button"
+              type="button"
+              disabled
+            >+</button>
+
+            <span
+              id="zoomVal"
+              class="zoom-value"
+            >1.0x</span>
+
+            <button
+              id="zoomResetBtn"
+              type="button"
+              disabled
+            >
+              RESET
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- DISPLAY -->
+    <div class="section">
+
+      <div class="section-title">DISPLAY / OSD</div>
+
+      <div class="panel-row">
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="recToggle"
+            checked
+          >
+          REC
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="dateToggle"
+            checked
+          >
+          DATE
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="timerToggle"
+            checked
+          >
+          TIMER
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="hudToggle"
+            checked
+          >
+          CAMERA HUD
+        </label>
+
+        <label>
+          FORMAT
+          <select id="formatSelect">
+            <option value="vhs_classic">
+              VHS CLASSIC
+            </option>
+            <option value="ntsc">
+              NTSC
+            </option>
+            <option value="pal">
+              PAL
+            </option>
+          </select>
+        </label>
+
+      </div>
+
+      <div class="panel-row">
+
+        <label>
+          LABEL
+          <input
+            type="text"
+            id="labelInput"
+            value="PLAY"
+            maxlength="12"
+          >
+        </label>
+
+        <label>
+          TAPE SPEED
+          <select id="tapeSpeedSelect">
+            <option value="SP">SP</option>
+            <option value="LP">LP</option>
+            <option value="EP">EP</option>
+          </select>
+        </label>
+
+        <label>
+          BATTERY
+          <select id="batterySelect">
+            <option value="100">100%</option>
+            <option value="75">75%</option>
+            <option value="50">50%</option>
+            <option value="25">25%</option>
+          </select>
+        </label>
+
+      </div>
+
+    </div>
+
+    <!-- TAPE -->
+    <div class="section">
+
+      <div class="section-title">TAPE SIMULATION</div>
+
+      <div class="panel-row">
+
+        <label>
+          PRESET
+          <select id="tapePresetSelect">
+            <option value="vhs">VHS 1991</option>
+            <option value="vhsc">VHS-C 1993</option>
+            <option value="svhs">S-VHS 1995</option>
+            <option value="video8">Video8 1996</option>
+            <option value="hi8">Hi8 1998</option>
+            <option value="minidv">MiniDV 2002</option>
+          </select>
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="autoVhsToggle"
+            checked
+          >
+          AUTO VHS
+        </label>
+
+      </div>
+
+      <div class="panel-row">
+
+        <label class="range-wrap">
+          DAMAGE
+
+          <input
+            id="damageRange"
+            type="range"
+            min="0"
+            max="100"
+            value="35"
+          >
+
+          <span
+            id="damageValue"
+            class="range-value"
+          >
+            35%
+          </span>
+        </label>
+
+        <label class="range-wrap">
+          GRAIN
+
+          <input
+            id="grainRange"
+            type="range"
+            min="0"
+            max="100"
+            value="45"
+          >
+
+          <span
+            id="grainValue"
+            class="range-value"
+          >
+            45%
+          </span>
+        </label>
+
+      </div>
+
+    </div>
+
+    <!-- IMAGE -->
+    <div class="section">
+
+      <div class="section-title">IMAGE PROCESSING</div>
+
+      <div class="panel-row">
+
+        <label>
+          STYLE
+          <select id="styleFilterSelect">
+            <option value="vhs">VHS COLOR</option>
+            <option value="crossprocess">CROSS PROCESS</option>
+            <option value="technicolor">TECHNICOLOR</option>
+            <option value="mono">B&W TAPE</option>
+            <option value="warm">WARM HOME VIDEO</option>
+          </select>
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="glitchToggle"
+            checked
+          >
+          COLOR SHIFT
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="grainToggle"
+            checked
+          >
+          TAPE GRAIN
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="trackingToggle"
+            checked
+          >
+          TRACKING
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="chromaToggle"
+            checked
+          >
+          CHROMA BLEED
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="scanlineToggle"
+            checked
+          >
+          SCANLINES
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            id="jitterToggle"
+            checked
+          >
+          JITTER
+        </label>
+
+      </div>
+
+    </div>
+
+    <!-- DATE / TIME -->
+    <div class="section">
+
+      <div class="section-title">CAMERA CLOCK</div>
+
+      <div class="panel-row">
+
+        <label>
+          DATE
+          <input
+            type="date"
+            id="customDate"
+          >
+        </label>
+
+        <label>
+          TIME
+          <input
+            type="time"
+            id="customTime"
+            step="1"
+          >
+        </label>
+
+        <button
+          id="resetDateTimeBtn"
+          type="button"
+        >
+          RESET CLOCK
+        </button>
+
+        <button
+          id="date1991Btn"
+          type="button"
+        >
+          1991
+        </button>
+
+        <button
+          id="date1995Btn"
+          type="button"
+        >
+          1995
+        </button>
+
+        <button
+          id="date1998Btn"
+          type="button"
+        >
+          1998
+        </button>
+
+        <button
+          id="date2002Btn"
+          type="button"
+        >
+          2002
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- ADVANCED -->
+    <details>
+
+      <summary>
+        ADVANCED CAMERA SETTINGS
+      </summary>
+
+      <div class="advanced-content">
+
+        <div class="panel-row">
+
+          <label>
+            RESOLUTION
+            <select id="resSelect">
+              <option value="720p">
+                720p
+              </option>
+              <option value="480p" selected>
+                480p RETRO
+              </option>
+              <option value="320p">
+                320p LO-FI
+              </option>
+            </select>
+          </label>
+
+          <label>
+            ASPECT
+            <select id="aspectSelect">
+              <option value="4:3">
+                4:3
+              </option>
+              <option value="16:9">
+                16:9
+              </option>
+            </select>
+          </label>
+
+          <label class="toggle">
+            <input
+              type="checkbox"
+              id="micToggle"
+            >
+            MICROPHONE
+          </label>
+
+        </div>
+
+      </div>
+
+    </details>
+
+  </section>
+
+  <video
+    id="webcam"
+    autoplay
+    playsinline
+    muted
+    style="display:none"
+  ></video>
+
+  <script>
+    /* =========================================================
+       ELEMENTS
+       ========================================================= */
+
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('vhsCanvas');
+    const ctx = canvas.getContext('2d', {
+      alpha: false
+    });
+
+    const startBtn = document.getElementById('startBtn');
+    const stopCamBtn = document.getElementById('stopCamBtn');
+    const recBtn = document.getElementById('recBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const snapBtn = document.getElementById('snapBtn');
+    const rotateBtn = document.getElementById('rotateBtn');
+
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+    const zoomVal = document.getElementById('zoomVal');
+    const zoomMarker = document.getElementById('zoomMarker');
+
+    const recToggle = document.getElementById('recToggle');
+    const dateToggle = document.getElementById('dateToggle');
+    const timerToggle = document.getElementById('timerToggle');
+    const hudToggle = document.getElementById('hudToggle');
+
+    const resSelect = document.getElementById('resSelect');
+    const aspectSelect = document.getElementById('aspectSelect');
+
+    const labelInput = document.getElementById('labelInput');
+    const tapeSpeedSelect = document.getElementById('tapeSpeedSelect');
+    const batterySelect = document.getElementById('batterySelect');
+
+    const tapePresetSelect =
+      document.getElementById('tapePresetSelect');
+
+    const autoVhsToggle =
+      document.getElementById('autoVhsToggle');
+
+    const damageRange =
+      document.getElementById('damageRange');
+
+    const damageValue =
+      document.getElementById('damageValue');
+
+    const grainRange =
+      document.getElementById('grainRange');
+
+    const grainValue =
+      document.getElementById('grainValue');
+
+    const styleFilterSelect =
+      document.getElementById('styleFilterSelect');
+
+    const glitchToggle =
+      document.getElementById('glitchToggle');
+
+    const grainToggle =
+      document.getElementById('grainToggle');
+
+    const trackingToggle =
+      document.getElementById('trackingToggle');
+
+    const chromaToggle =
+      document.getElementById('chromaToggle');
+
+    const scanlineToggle =
+      document.getElementById('scanlineToggle');
+
+    const jitterToggle =
+      document.getElementById('jitterToggle');
+
+    const formatSelect =
+      document.getElementById('formatSelect');
+
+    const customDate =
+      document.getElementById('customDate');
+
+    const customTime =
+      document.getElementById('customTime');
+
+    const resetDateTimeBtn =
+      document.getElementById('resetDateTimeBtn');
+
+    const micToggle =
+      document.getElementById('micToggle');
+
+    const snapshotFlash =
+      document.getElementById('snapshotFlash');
+
+    /* =========================================================
+       STATE
+       ========================================================= */
+
+    let zoomLevel = 1.0;
+
+    let mediaStream = null;
+    let mediaRecorder = null;
+
+    let recordedChunks = [];
+
+    let isRecording = false;
+    let isPaused = false;
+
+    let recStartTime = 0;
+    let pauseStartTimestamp = 0;
+    let pausedTimeAccumulated = 0;
+
+    let animFrameId = null;
+
+    let overlayRotationAngle = 0;
+
+    let canvasWidth = 640;
+    let canvasHeight = 480;
+
+    let baseTimeOffset = 0;
+
+    let audioCtx = null;
+    let micStreamSource = null;
+    let processedAudioDestination = null;
+
+    let zoomTimer = null;
+    let zoomDirection = 0;
+    let zoomSpeed = 0.12;
+    let zoomLastTick = 0;
+
+    let autoDamagePhase = 0;
+
+    /* =========================================================
+       CAMERA PRESETS
+       ========================================================= */
+
+    const tapePresets = {
+      vhs: {
+        damage: 35,
+        grain: 45,
+        chroma: true,
+        tracking: true,
+        jitter: true,
+        softness: 1,
+        color: 'vhs'
+      },
+
+      vhsc: {
+        damage: 48,
+        grain: 58,
+        chroma: true,
+        tracking: true,
+        jitter: true,
+        softness: 1.15,
+        color: 'warm'
+      },
+
+      svhs: {
+        damage: 16,
+        grain: 22,
+        chroma: true,
+        tracking: true,
+        jitter: false,
+        softness: .65,
+        color: 'vhs'
+      },
+
+      video8: {
+        damage: 30,
+        grain: 42,
+        chroma: true,
+        tracking: false,
+        jitter: true,
+        softness: .9,
+        color: 'warm'
+      },
+
+      hi8: {
+        damage: 18,
+        grain: 28,
+        chroma: true,
+        tracking: false,
+        jitter: false,
+        softness: .7,
+        color: 'warm'
+      },
+
+      minidv: {
+        damage: 4,
+        grain: 5,
+        chroma: false,
+        tracking: false,
+        jitter: false,
+        softness: .2,
+        color: 'vhs'
+      }
+    };
+
+    /* =========================================================
+       CANVAS
+       ========================================================= */
+
+    function updateCanvasDimensions() {
+      const resolution = resSelect.value;
+      const aspect = aspectSelect.value;
+
+      if (resolution === '720p') {
+        canvasHeight = 720;
+        canvasWidth =
+          aspect === '16:9'
+            ? 1280
+            : 960;
+      }
+
+      else if (resolution === '320p') {
+        canvasHeight = 320;
+        canvasWidth =
+          aspect === '16:9'
+            ? 568
+            : 426;
+      }
+
+      else {
+        canvasHeight = 480;
+        canvasWidth =
+          aspect === '16:9'
+            ? 854
+            : 640;
+      }
+
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+    }
+
+    resSelect.addEventListener(
+      'change',
+      updateCanvasDimensions
+    );
+
+    aspectSelect.addEventListener(
+      'change',
+      updateCanvasDimensions
+    );
+
+    updateCanvasDimensions();
+
+    /* =========================================================
+       ZOOM
+       ========================================================= */
+
+    function updateZoom(newZoom) {
+      zoomLevel = Math.min(
+        Math.max(newZoom, 1.0),
+        3.0
+      );
+
+      zoomVal.textContent =
+        zoomLevel.toFixed(1) + 'x';
+
+      const percentage =
+        ((zoomLevel - 1) / 2) * 100;
+
+      zoomMarker.style.left =
+        percentage + '%';
+    }
+
+    function startContinuousZoom(direction) {
+      stopContinuousZoom();
+
+      zoomDirection = direction;
+      zoomSpeed = 0.12;
+      zoomLastTick = performance.now();
+
+      updateZoom(
+        zoomLevel + direction * zoomSpeed
+      );
+
+      function tick(now) {
+        if (!zoomDirection) return;
+
+        const elapsed =
+          now - zoomLastTick;
+
+        if (elapsed >= 70) {
+          zoomLastTick = now;
+
+          zoomSpeed = Math.min(
+            zoomSpeed + 0.035,
+            0.42
+          );
+
+          updateZoom(
+            zoomLevel +
+            zoomDirection * zoomSpeed
+          );
+
+          if (
+            zoomLevel >= 3 ||
+            zoomLevel <= 1
+          ) {
+            stopContinuousZoom();
+            return;
+          }
+        }
+
+        zoomTimer =
+          requestAnimationFrame(tick);
+      }
+
+      zoomTimer =
+        requestAnimationFrame(tick);
+    }
+
+    function stopContinuousZoom() {
+      zoomDirection = 0;
+
+      if (zoomTimer !== null) {
+        cancelAnimationFrame(zoomTimer);
+        zoomTimer = null;
+      }
+    }
+
+    function attachHoldZoom(button, direction) {
+
+      button.addEventListener(
+        'pointerdown',
+        event => {
+          event.preventDefault();
+
+          try {
+            button.setPointerCapture(
+              event.pointerId
+            );
+          } catch (_) {}
+
+          startContinuousZoom(direction);
+        }
+      );
+
+      button.addEventListener(
+        'pointerup',
+        stopContinuousZoom
+      );
+
+      button.addEventListener(
+        'pointercancel',
+        stopContinuousZoom
+      );
+
+      button.addEventListener(
+        'lostpointercapture',
+        stopContinuousZoom
+      );
+
+      button.addEventListener(
+        'pointerleave',
+        event => {
+          if (
+            event.pointerType === 'mouse' &&
+            event.buttons === 0
+          ) {
+            stopContinuousZoom();
+          }
+        }
+      );
+    }
+
+    attachHoldZoom(
+      zoomInBtn,
+      1
+    );
+
+    attachHoldZoom(
+      zoomOutBtn,
+      -1
+    );
+
+    zoomResetBtn.addEventListener(
+      'click',
+      () => {
+        stopContinuousZoom();
+        updateZoom(1);
+      }
+    );
+
+    /* =========================================================
+       ROTATION
+       ========================================================= */
+
+    rotateBtn.addEventListener(
+      'click',
+      () => {
+        overlayRotationAngle =
+          (overlayRotationAngle + 90) % 360;
+      }
+    );
+
+    /* =========================================================
+       DATE / TIME
+       ========================================================= */
+
+    function setDateYear(year) {
+      const now = new Date();
+
+      const month =
+        String(now.getMonth() + 1)
+          .padStart(2, '0');
+
+      const day =
+        String(now.getDate())
+          .padStart(2, '0');
+
+      customDate.value =
+        `${year}-${month}-${day}`;
+
+      const hours =
+        String(now.getHours())
+          .padStart(2, '0');
+
+      const mins =
+        String(now.getMinutes())
+          .padStart(2, '0');
+
+      const secs =
+        String(now.getSeconds())
+          .padStart(2, '0');
+
+      customTime.value =
+        `${hours}:${mins}:${secs}`;
+
+      updateBaseTimeOffset();
+    }
+
+    function resetClock() {
+      setDateYear(1991);
+    }
+
+    function updateBaseTimeOffset() {
+
+      if (
+        !customDate.value ||
+        !customTime.value
+      ) {
+        return;
+      }
+
+      const [year, month, day] =
+        customDate.value
+          .split('-')
+          .map(Number);
+
+      const [
+        hours,
+        minutes,
+        seconds = 0
+      ] =
+        customTime.value
+          .split(':')
+          .map(Number);
+
+      const selected =
+        new Date(
+          year,
+          month - 1,
+          day,
+          hours,
+          minutes,
+          seconds
+        );
+
+      baseTimeOffset =
+        selected.getTime() -
+        Date.now();
+    }
+
+    customDate.addEventListener(
+      'change',
+      updateBaseTimeOffset
+    );
+
+    customTime.addEventListener(
+      'change',
+      updateBaseTimeOffset
+    );
+
+    resetDateTimeBtn.addEventListener(
+      'click',
+      resetClock
+    );
+
+    document
+      .getElementById('date1991Btn')
+      .addEventListener(
+        'click',
+        () => setDateYear(1991)
+      );
+
+    document
+      .getElementById('date1995Btn')
+      .addEventListener(
+        'click',
+        () => setDateYear(1995)
+      );
+
+    document
+      .getElementById('date1998Btn')
+      .addEventListener(
+        'click',
+        () => setDateYear(1998)
+      );
+
+    document
+      .getElementById('date2002Btn')
+      .addEventListener(
+        'click',
+        () => setDateYear(2002)
+      );
+
+    resetClock();
+
+    /* =========================================================
+       TAPE PRESETS
+       ========================================================= */
+
+    function applyTapePreset() {
+
+      const preset =
+        tapePresets[
+          tapePresetSelect.value
+        ];
+
+      if (!preset) return;
+
+      damageRange.value =
+        preset.damage;
+
+      grainRange.value =
+        preset.grain;
+
+      damageValue.textContent =
+        preset.damage + '%';
+
+      grainValue.textContent =
+        preset.grain + '%';
+
+      chromaToggle.checked =
+        preset.chroma;
+
+      trackingToggle.checked =
+        preset.tracking;
+
+      jitterToggle.checked =
+        preset.jitter;
+
+      styleFilterSelect.value =
+        preset.color;
+
+      updateImageControls();
+    }
+
+    tapePresetSelect.addEventListener(
+      'change',
+      applyTapePreset
+    );
+
+    damageRange.addEventListener(
+      'input',
+      () => {
+        damageValue.textContent =
+          damageRange.value + '%';
+      }
+    );
+
+    grainRange.addEventListener(
+      'input',
+      () => {
+        grainValue.textContent =
+          grainRange.value + '%';
+      }
+    );
+
+    function updateImageControls() {
+      grainToggle.checked =
+        Number(grainRange.value) > 0;
+    }
+
+    applyTapePreset();
+
+    /* =========================================================
+       CAMERA HARDWARE
+       ========================================================= */
+
+    startBtn.addEventListener(
+      'click',
+      startCamera
+    );
+
+    async function startCamera() {
+
+      try {
+
+        mediaStream =
+          await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: {
+                ideal: 'environment'
+              },
+              width: {
+                ideal: 3840
+              },
+              height: {
+                ideal: 2160
+              }
+            },
+            audio: true
+          });
+
+        video.srcObject =
+          mediaStream;
+
+        await video.play();
+
+        setupAudioPipeline(
+          mediaStream
+        );
+
+        updateMicState();
+
+        startBtn.disabled = true;
+        stopCamBtn.disabled = false;
+        recBtn.disabled = false;
+        snapBtn.disabled = false;
+
+        zoomInBtn.disabled = false;
+        zoomOutBtn.disabled = false;
+        zoomResetBtn.disabled = false;
+
+        processFrame();
+
+      } catch (error) {
+
+        console.error(error);
+
+        alert(
+          'Camera/Microphone access failed:\n\n' +
+          error.message
+        );
+      }
+    }
+
+    stopCamBtn.addEventListener(
+      'click',
+      stopCameraHardware
+    );
+
+    function stopCameraHardware() {
+
+      stopContinuousZoom();
+
+      if (animFrameId !== null) {
+        cancelAnimationFrame(
+          animFrameId
+        );
+
+        animFrameId = null;
+      }
+
+      if (
+        mediaRecorder &&
+        mediaRecorder.state !== 'inactive'
+      ) {
+        try {
+          mediaRecorder.stop();
+        } catch (_) {}
+      }
+
+      isRecording = false;
+      isPaused = false;
+
+      if (mediaStream) {
+
+        mediaStream
+          .getTracks()
+          .forEach(track => {
+            try {
+              track.stop();
+            } catch (_) {}
+          });
+
+        mediaStream = null;
+      }
+
+      if (audioCtx) {
+
+        try {
+          audioCtx.close();
+        } catch (_) {}
+
+        audioCtx = null;
+      }
+
+      micStreamSource = null;
+      processedAudioDestination = null;
+
+      video.srcObject = null;
+
+      ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      startBtn.disabled = false;
+      stopCamBtn.disabled = true;
+
+      recBtn.disabled = true;
+      pauseBtn.disabled = true;
+      snapBtn.disabled = true;
+
+      zoomInBtn.disabled = true;
+      zoomOutBtn.disabled = true;
+      zoomResetBtn.disabled = true;
+
+      recBtn.textContent =
+        '● START REC';
+
+      recBtn.classList.remove(
+        'recording'
+      );
+
+      pauseBtn.textContent =
+        'PAUSE';
+
+      pauseBtn.classList.remove(
+        'paused'
+      );
+    }
+
+    /* =========================================================
+       AUDIO
+       ========================================================= */
+
+    function setupAudioPipeline(stream) {
+
+      if (audioCtx) {
+        try {
+          audioCtx.close();
+        } catch (_) {}
+      }
+
+      audioCtx =
+        new (
+          window.AudioContext ||
+          window.webkitAudioContext
+        )();
+
+      processedAudioDestination =
+        audioCtx.createMediaStreamDestination();
+
+      const source =
+        audioCtx.createMediaStreamSource(
+          stream
+        );
+
+      const highPass =
+        audioCtx.createBiquadFilter();
+
+      highPass.type =
+        'highpass';
+
+      highPass.frequency.value =
+        70;
+
+      const lowPass =
+        audioCtx.createBiquadFilter();
+
+      lowPass.type =
+        'lowpass';
+
+      lowPass.frequency.value =
+        2600;
+
+      const compressor =
+        audioCtx.createDynamicsCompressor();
+
+      compressor.threshold.value =
+        -18;
+
+      compressor.knee.value =
+        20;
+
+      compressor.ratio.value =
+        4;
+
+      compressor.attack.value =
+        .003;
+
+      compressor.release.value =
+        .2;
+
+      const gain =
+        audioCtx.createGain();
+
+      gain.gain.value =
+        1.2;
+
+      source
+        .connect(highPass)
+        .connect(lowPass)
+        .connect(compressor)
+        .connect(gain)
+        .connect(
+          processedAudioDestination
+        );
+
+      micStreamSource = source;
+    }
+
+    function updateMicState() {
+
+      if (
+        mediaStream &&
+        mediaStream.getAudioTracks()
+          .length
+      ) {
+
+        mediaStream
+          .getAudioTracks()
+          .forEach(track => {
+            track.enabled =
+              micToggle.checked;
+          });
+      }
+
+      if (
+        audioCtx &&
+        audioCtx.state === 'suspended' &&
+        micToggle.checked
+      ) {
+        audioCtx.resume();
+      }
+    }
+
+    micToggle.addEventListener(
+      'change',
+      updateMicState
+    );
+
+    /* =========================================================
+       RENDER LOOP
+       ========================================================= */
+
+    function processFrame() {
+
+      if (
+        video.readyState >=
+        video.HAVE_CURRENT_DATA
+      ) {
+
+        renderVideoFrame();
+
+        applyStyleFilter();
+
+        renderRotatedOverlayLayer();
+      }
+
+      animFrameId =
+        requestAnimationFrame(
+          processFrame
+        );
+    }
+
+    function renderVideoFrame() {
+
+      const w = canvasWidth;
+      const h = canvasHeight;
+
+      if (
+        !video.videoWidth ||
+        !video.videoHeight
+      ) {
+        return;
+      }
+
+      const sourceAspect =
+        video.videoWidth /
+        video.videoHeight;
+
+      const targetAspect =
+        w / h;
+
+      let sw;
+      let sh;
+
+      if (
+        sourceAspect > targetAspect
+      ) {
+        sh =
+          video.videoHeight /
+          zoomLevel;
+
+        sw =
+          sh *
+          targetAspect;
+
+      } else {
+
+        sw =
+          video.videoWidth /
+          zoomLevel;
+
+        sh =
+          sw /
+          targetAspect;
+      }
+
+      sw =
+        Math.min(
+          sw,
+          video.videoWidth
+        );
+
+      sh =
+        Math.min(
+          sh,
+          video.videoHeight
+        );
+
+      const sx =
+        (video.videoWidth - sw) / 2;
+
+      const sy =
+        (video.videoHeight - sh) / 2;
+
+      ctx.drawImage(
+        video,
+        sx,
+        sy,
+        sw,
+        sh,
+        0,
+        0,
+        w,
+        h
+      );
+    }
+
+    /* =========================================================
+       IMAGE FILTER
+       ========================================================= */
+
+    function applyStyleFilter() {
+
+      const style =
+        styleFilterSelect.value;
+
+      if (style === 'vhs') {
+        return;
+      }
+
+      const image =
+        ctx.getImageData(
+          0,
+          0,
+          canvasWidth,
+          canvasHeight
+        );
+
+      const data =
+        image.data;
+
+      for (
+        let i = 0;
+        i < data.length;
+        i += 4
+      ) {
+
+        let r = data[i];
+        let g = data[i + 1];
+        let b = data[i + 2];
+
+        if (style === 'crossprocess') {
+
+          r =
+            Math.min(
+              255,
+              Math.pow(r / 255, 1.15) *
+              255 *
+              1.12
+            );
+
+          g =
+            Math.min(
+              255,
+              Math.pow(g / 255, .88) *
+              255 *
+              1.08
+            );
+
+          b =
+            Math.min(
+              255,
+              Math.pow(b / 255, 1.35) *
+              255 *
+              .85
+            );
+        }
+
+        else if (
+          style === 'technicolor'
+        ) {
+
+          r =
+            Math.min(
+              255,
+              r * 1.3
+            );
+
+          g =
+            Math.min(
+              255,
+              g * 1.15
+            );
+
+          b =
+            Math.min(
+              255,
+              b * .85
+            );
+        }
+
+        else if (
+          style === 'mono'
+        ) {
+
+          const gray =
+            r * .299 +
+            g * .587 +
+            b * .114;
+
+          r = gray;
+          g = gray;
+          b = gray;
+        }
+
+        else if (
+          style === 'warm'
+        ) {
+
+          r =
+            Math.min(
+              255,
+              r * 1.08 + 8
+            );
+
+          g =
+            Math.min(
+              255,
+              g * 1.01
+            );
+
+          b =
+            Math.max(
+              0,
+              b * .88
+            );
+        }
+
+        data[i] =
+          Math.min(255, Math.max(0, r));
+
+        data[i + 1] =
+          Math.min(255, Math.max(0, g));
+
+        data[i + 2] =
+          Math.min(255, Math.max(0, b));
+      }
+
+      ctx.putImageData(
+        image,
+        0,
+        0
+      );
+    }
+
+    /* =========================================================
+       ROTATED OVERLAY
+       ========================================================= */
+
+    function renderRotatedOverlayLayer() {
+
+      ctx.save();
+
+      if (
+        overlayRotationAngle === 90
+      ) {
+
+        ctx.translate(
+          canvasWidth,
+          0
+        );
+
+        ctx.rotate(
+          Math.PI / 2
+        );
+
+        applyEffectsAndLabels(
+          canvasHeight,
+          canvasWidth
+        );
+      }
+
+      else if (
+        overlayRotationAngle === 180
+      ) {
+
+        ctx.translate(
+          canvasWidth,
+          canvasHeight
+        );
+
+        ctx.rotate(
+          Math.PI
+        );
+
+        applyEffectsAndLabels(
+          canvasWidth,
+          canvasHeight
+        );
+      }
+
+      else if (
+        overlayRotationAngle === 270
+      ) {
+
+        ctx.translate(
+          0,
+          canvasHeight
+        );
+
+        ctx.rotate(
+          -Math.PI / 2
+        );
+
+        applyEffectsAndLabels(
+          canvasHeight,
+          canvasWidth
+        );
+      }
+
+      else {
+
+        applyEffectsAndLabels(
+          canvasWidth,
+          canvasHeight
+        );
+      }
+
+      ctx.restore();
+    }
+
+    function applyEffectsAndLabels(w, h) {
+
+      const preset =
+        tapePresets[
+          tapePresetSelect.value
+        ];
+
+      let damage =
+        Number(damageRange.value);
+
+      let grain =
+        Number(grainRange.value);
+
+      if (autoVhsToggle.checked) {
+
+        autoDamagePhase += .04;
+
+        damage +=
+          Math.sin(
+            autoDamagePhase
+          ) * 7;
+
+        damage =
+          Math.max(
+            0,
+            Math.min(
+              100,
+              damage
+            )
+          );
+      }
+
+      if (
+        jitterToggle.checked ||
+        preset?.jitter
+      ) {
+        renderFrameJitter(
+          w,
+          h,
+          damage
+        );
+      }
+
+      if (
+        chromaToggle.checked &&
+        damage > 5
+      ) {
+        renderChromaBleed(
+          w,
+          h,
+          damage
+        );
+      }
+
+      if (
+        glitchToggle.checked
+      ) {
+        applyGlitchEffect(
+          w,
+          h,
+          damage
+        );
+      }
+
+      if (
+        grainToggle.checked &&
+        grain > 0
+      ) {
+        renderTapeGrain(
+          w,
+          h,
+          grain
+        );
+      }
+
+      if (
+        trackingToggle.checked &&
+        damage > 0
+      ) {
+        renderTrackingDistortion(
+          w,
+          h,
+          damage
+        );
+      }
+
+      if (
+        scanlineToggle.checked
+      ) {
+        renderScanlines(
+          w,
+          h
+        );
+      }
+
+      if (hudToggle.checked) {
+        drawTextContent(
+          w,
+          h
+        );
+      }
+    }
+
+    /* =========================================================
+       VHS EFFECTS
+       ========================================================= */
+
+    function applyGlitchEffect(
+      w,
+      h,
+      damage
+    ) {
+
+      const intensity =
+        Math.min(
+          1,
+          damage / 100
+        );
+
+      if (
+        Math.random() >
+        (.08 + intensity * .2)
+      ) {
+        return;
+      }
+
+      const image =
+        ctx.getImageData(
+          0,
+          0,
+          w,
+          h
+        );
+
+      const data =
+        image.data;
+
+      const shift =
+        Math.max(
+          2,
+          Math.floor(
+            w *
+            .006 *
+            intensity
+          )
+        );
+
+      for (
+        let i = 0;
+        i < data.length;
+        i += 4
+      ) {
+
+        if (
+          i + shift * 4 <
+          data.length
+        ) {
+          data[i] =
+            data[
+              i + shift * 4
+            ];
+        }
+
+        data[i + 1] =
+          Math.max(
+            0,
+            data[i + 1] *
+            (1 - intensity * .18)
+          );
+      }
+
+      ctx.putImageData(
+        image,
+        0,
+        0
+      );
+    }
+
+    function renderChromaBleed(
+      w,
+      h,
+      damage
+    ) {
+
+      const intensity =
+        damage / 100;
+
+      if (
+        Math.random() >
+        .3 * intensity
+      ) {
+        return;
+      }
+
+      ctx.save();
+
+      ctx.globalCompositeOperation =
+        'screen';
+
+      ctx.globalAlpha =
+        .08 + intensity * .08;
+
+      ctx.drawImage(
+        canvas,
+        3 + intensity * 5,
+        0
+      );
+
+      ctx.globalAlpha =
+        .05 + intensity * .05;
+
+      ctx.drawImage(
+        canvas,
+        -(2 + intensity * 4),
+        0
+      );
+
+      ctx.restore();
+    }
+
+    function renderTapeGrain(
+      w,
+      h,
+      amount
+    ) {
+
+      const image =
+        ctx.getImageData(
+          0,
+          0,
+          w,
+          h
+        );
+
+      const data =
+        image.data;
+
+      const strength =
+        amount / 100;
+
+      const probability =
+        .035 +
+        strength * .22;
+
+      const amplitude =
+        5 +
+        strength * 28;
+
+      for (
+        let i = 0;
+        i < data.length;
+        i += 4
+      ) {
+
+        if (
+          Math.random() <
+          probability
+        ) {
+
+          const noise =
+            (
+              Math.random() -
+              .5
+            ) *
+            amplitude;
+
+          data[i] =
+            Math.min(
+              255,
+              Math.max(
+                0,
+                data[i] + noise
+              )
+            );
+
+          data[i + 1] =
+            Math.min(
+              255,
+              Math.max(
+                0,
+                data[i + 1] + noise
+              )
+            );
+
+          data[i + 2] =
+            Math.min(
+              255,
+              Math.max(
+                0,
+                data[i + 2] + noise
+              )
+            );
+        }
+      }
+
+      ctx.putImageData(
+        image,
+        0,
+        0
+      );
+    }
+
+    function renderTrackingDistortion(
+      w,
+      h,
+      damage
+    ) {
+
+      const intensity =
+        damage / 100;
+
+      if (
+        Math.random() >
+        .08 + intensity * .55
+      ) {
+        return;
+      }
+
+      const sliceHeight =
+        Math.max(
+          2,
+          Math.floor(
+            h *
+            (.003 +
+            Math.random() *
+            .025 *
+            intensity)
+          )
+        );
+
+      const y =
+        Math.floor(
+          h -
+          Math.random() *
+          h *
+          .22
+        );
+
+      const shift =
+        (
+          Math.random() -
+          .5
+        ) *
+        w *
+        .05 *
+        intensity;
+
+      const slice =
+        ctx.getImageData(
+          0,
+          y,
+          w,
+          sliceHeight
+        );
+
+      ctx.putImageData(
+        slice,
+        shift,
+        y
+      );
+
+      if (
+        Math.random() <
+        .35 * intensity
+      ) {
+
+        ctx.fillStyle =
+          'rgba(255,255,255,.18)';
+
+        ctx.fillRect(
+          0,
+          y,
+          w,
+          1
+        );
+      }
+    }
+
+    function renderFrameJitter(
+      w,
+      h,
+      damage
+    ) {
+
+      const intensity =
+        damage / 100;
+
+      if (
+        Math.random() >
+        .025 * intensity
+      ) {
+        return;
+      }
+
+      const shift =
+        (
+          Math.random() -
+          .5
+        ) *
+        w *
+        .012 *
+        intensity;
+
+      ctx.save();
+
+      ctx.globalAlpha =
+        .25 * intensity;
+
+      ctx.drawImage(
+        canvas,
+        shift,
+        0
+      );
+
+      ctx.restore();
+    }
+
+    function renderScanlines(
+      w,
+      h
+    ) {
+
+      ctx.save();
+
+      ctx.globalAlpha =
+        .07;
+
+      ctx.fillStyle =
+        '#000';
+
+      for (
+        let y = 1;
+        y < h;
+        y += 4
+      ) {
+        ctx.fillRect(
+          0,
+          y,
+          w,
+          1
+        );
+      }
+
+      ctx.restore();
+    }
+
+    /* =========================================================
+       OSD
+       ========================================================= */
+
+    function getFormattedDateTime(
+      d,
+      style
+    ) {
+
+      const monthsShort = [
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AUG',
+        'SEP',
+        'OCT',
+        'NOV',
+        'DEC'
+      ];
+
+      const yrFull =
+        d.getFullYear();
+
+      const yr2Digit =
+        String(yrFull).slice(-2);
+
+      const moName =
+        monthsShort[
+          d.getMonth()
+        ];
+
+      const dayPad =
+        String(
+          d.getDate()
+        ).padStart(2, '0');
+
+      const dayNum =
+        d.getDate();
+
+      const hours =
+        d.getHours();
+
+      const ampm =
+        hours >= 12
+          ? 'PM'
+          : 'AM';
+
+      const hours12 =
+        String(
+          hours % 12 || 12
+        ).padStart(2, '0');
+
+      const minsPad =
+        String(
+          d.getMinutes()
+        ).padStart(2, '0');
+
+      const secsPad =
+        String(
+          d.getSeconds()
+        ).padStart(2, '0');
+
+      if (
+        style === 'ntsc'
+      ) {
+
+        return {
+          timeStr:
+            `${hours12}:${minsPad}:${secsPad} ${ampm}`,
+
+          dateStr:
+            `${moName} ${dayPad} ${yrFull}`
+        };
+      }
+
+      if (
+        style === 'pal'
+      ) {
+
+        return {
+          timeStr:
+            `${String(hours).padStart(2, '0')}:${minsPad}:${secsPad}`,
+
+          dateStr:
+            `${dayPad}/${String(d.getMonth() + 1).padStart(2, '0')}/${yrFull}`
+        };
+      }
+
+      const moNameLower =
+        moName.toLowerCase();
+
+      return {
+        timeStr:
+          `${dayNum}.${moNameLower}.${yr2Digit}`,
+
+        dateStr:
+          `${hours12}:${minsPad} ${ampm}`
+      };
+    }
+
+    function drawTextContent(
+      w,
+      h
+    ) {
+
+      const fontSize =
+        Math.max(
+          16,
+          Math.floor(
+            h * .045
+          )
+        );
+
+      const pad =
+        Math.floor(
+          h * .045
+        );
+
+      ctx.save();
+
+      ctx.font =
+        `${fontSize}px "VCR OSD Mono", monospace`;
+
+      ctx.shadowColor =
+        '#000';
+
+      ctx.shadowBlur =
+        Math.max(
+          2,
+          Math.floor(
+            h * .008
+          )
+        );
+
+      /* -------------------------------------------------------
+         REC / LABEL
+         ------------------------------------------------------- */
+
+      if (
+        recToggle.checked
+      ) {
+
+        let label =
+          labelInput.value
+            .trim()
+            .toUpperCase();
+
+        if (!label) {
+          label = 'PLAY';
+        }
+
+        let displayLabel =
+          label;
+
+        if (isRecording) {
+
+          displayLabel =
+            isPaused
+              ? `PAUSE ${label}`
+              : `REC ${label}`;
+
+        } else {
+
+          displayLabel =
+            `PLAY ${label}`;
+        }
+
+        ctx.fillStyle =
+          isPaused
+            ? '#ffae00'
+            : isRecording
+              ? '#ff3333'
+              : '#00ff88';
+
+        ctx.fillText(
+          displayLabel,
+          pad,
+          pad * 1.25
+        );
+
+        if (
+          isRecording &&
+          !isPaused
+        ) {
+
+          ctx.beginPath();
+
+          ctx.fillStyle =
+            '#ff2222';
+
+          ctx.arc(
+            pad * .42,
+            pad * 1.05,
+            Math.max(
+              3,
+              fontSize * .12
+            ),
+            0,
+            Math.PI * 2
+          );
+
+          ctx.fill();
+        }
+      }
+
+      /* -------------------------------------------------------
+         HUD RIGHT TOP
+         ------------------------------------------------------- */
+
+      if (
+        hudToggle.checked
+      ) {
+
+        ctx.textAlign =
+          'right';
+
+        ctx.font =
+          `${Math.max(13, fontSize * .7)}px "VCR OSD Mono", monospace`;
+
+        ctx.fillStyle =
+          '#fff';
+
+        ctx.fillText(
+          tapeSpeedSelect.value,
+          w - pad,
+          pad * .95
+        );
+
+        const battery =
+          Number(
+            batterySelect.value
+          );
+
+        const bars =
+          Math.ceil(
+            battery / 25
+          );
+
+        const batteryText =
+          '[' +
+          '█'.repeat(bars) +
+          '░'.repeat(
+            4 - bars
+          ) +
+          ']';
+
+        ctx.fillText(
+          batteryText,
+          w - pad,
+          pad * 1.8
+        );
+
+        ctx.textAlign =
+          'left';
+      }
+
+      /* -------------------------------------------------------
+         DATE / TIME
+         ------------------------------------------------------- */
+
+      if (
+        dateToggle.checked
+      ) {
+
+        const dynamicTime =
+          new Date(
+            Date.now() +
+            baseTimeOffset
+          );
+
+        const formatted =
+          getFormattedDateTime(
+            dynamicTime,
+            formatSelect.value
+          );
+
+        ctx.font =
+          `${Math.floor(fontSize * .9)}px "VCR OSD Mono", monospace`;
+
+        ctx.fillStyle =
+          '#e6c229';
+
+        ctx.textAlign =
+          'left';
+
+        ctx.fillText(
+          formatted.timeStr,
+          pad,
+          h - pad * .95
+        );
+
+        ctx.fillText(
+          formatted.dateStr,
+          pad,
+          h - pad * .35
+        );
+      }
+
+      /* -------------------------------------------------------
+         RECORDING TIMER
+         ------------------------------------------------------- */
+
+      if (
+        timerToggle.checked &&
+        isRecording
+      ) {
+
+        let elapsedMs;
+
+        if (isPaused) {
+
+          elapsedMs =
+            pauseStartTimestamp -
+            recStartTime -
+            pausedTimeAccumulated;
+
+        } else {
+
+          elapsedMs =
+            Date.now() -
+            recStartTime -
+            pausedTimeAccumulated;
+        }
+
+        const elapsed =
+          formatRecordedDuration(
+            elapsedMs
+          );
+
+        ctx.font =
+          `${Math.floor(fontSize * .9)}px "VCR OSD Mono", monospace`;
+
+        ctx.fillStyle =
+          isPaused
+            ? '#ffaa00'
+            : '#ff3333';
+
+        ctx.textAlign =
+          'right';
+
+        ctx.fillText(
+          elapsed,
+          w - pad,
+          h - pad * .35
+        );
+
+        ctx.textAlign =
+          'left';
+      }
+
+      ctx.restore();
+    }
+
+    function formatRecordedDuration(
+      ms
+    ) {
+
+      const totalSeconds =
+        Math.floor(
+          Math.max(
+            0,
+            ms
+          ) / 1000
+        );
+
+      const hours =
+        String(
+          Math.floor(
+            totalSeconds / 3600
+          )
+        ).padStart(2, '0');
+
+      const minutes =
+        String(
+          Math.floor(
+            (totalSeconds % 3600) / 60
+          )
+        ).padStart(2, '0');
+
+      const seconds =
+        String(
+          totalSeconds % 60
+        ).padStart(2, '0');
+
+      return (
+        `${hours}:${minutes}:${seconds}`
+      );
+    }
+
+    /* =========================================================
+       SNAPSHOT
+       ========================================================= */
+
+    snapBtn.addEventListener(
+      'click',
+      takeSnapshot
+    );
+
+    function takeSnapshot() {
+
+      if (
+        !mediaStream
+      ) {
+        return;
+      }
+
+      snapshotFlash.classList.remove(
+        'flash'
+      );
+
+      void snapshotFlash.offsetWidth;
+
+      snapshotFlash.classList.add(
+        'flash'
+      );
+
+      const url =
+        canvas.toDataURL(
+          'image/png'
+        );
+
+      const a =
+        document.createElement('a');
+
+      a.href = url;
+
+      a.download =
+        `vhs_photo_${Date.now()}.png`;
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      a.remove();
+    }
+
+    /* =========================================================
+       RECORDING
+       ========================================================= */
+
+    recBtn.addEventListener(
+      'click',
+      () => {
+
+        if (!isRecording) {
+          startRecording();
+        } else {
+          stopRecording();
+        }
+
+      }
+    );
+
+    pauseBtn.addEventListener(
+      'click',
+      () => {
+
+        if (
+          !isRecording ||
+          !mediaRecorder
+        ) {
+          return;
+        }
+
+        if (!isPaused) {
+
+          if (
+            mediaRecorder.state ===
+            'recording'
+          ) {
+
+            mediaRecorder.pause();
+
+            isPaused = true;
+
+            pauseStartTimestamp =
+              Date.now();
+
+            pauseBtn.textContent =
+              'RESUME';
+
+            pauseBtn.classList.add(
+              'paused'
+            );
+          }
+
+        } else {
+
+          if (
+            mediaRecorder.state ===
+            'paused'
+          ) {
+
+            pausedTimeAccumulated +=
+              Date.now() -
+              pauseStartTimestamp;
+
+            mediaRecorder.resume();
+
+            isPaused = false;
+
+            pauseBtn.textContent =
+              'PAUSE';
+
+            pauseBtn.classList.remove(
+              'paused'
+            );
+          }
+        }
+      }
+    );
+
+    function startRecording() {
+
+      if (!mediaStream) {
+        return;
+      }
+
+      recordedChunks = [];
+
+      recStartTime =
+        Date.now();
+
+      pausedTimeAccumulated = 0;
+      pauseStartTimestamp = 0;
+      isPaused = false;
+
+      const canvasStream =
+        canvas.captureStream(30);
+
+      const tracks = [
+        ...canvasStream
+          .getVideoTracks()
+      ];
+
+      if (
+        processedAudioDestination &&
+        processedAudioDestination
+          .stream
+          .getAudioTracks()
+          .length
+      ) {
+
+        tracks.push(
+          ...processedAudioDestination
+            .stream
+            .getAudioTracks()
+        );
+      }
+
+      const combinedStream =
+        new MediaStream(
+          tracks
+        );
+
+      let mimeType =
+        '';
+
+      const candidates = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4'
+      ];
+
+      for (
+        const candidate
+        of candidates
+      ) {
+
+        if (
+          MediaRecorder.isTypeSupported(
+            candidate
+          )
+        ) {
+
+          mimeType =
+            candidate;
+
+          break;
+        }
+      }
+
+      try {
+
+        mediaRecorder =
+          mimeType
+            ? new MediaRecorder(
+                combinedStream,
+                { mimeType }
+              )
+            : new MediaRecorder(
+                combinedStream
+              );
+
+      } catch (error) {
+
+        console.error(error);
+
+        try {
+          mediaRecorder =
+            new MediaRecorder(
+              combinedStream
+            );
+        } catch (secondError) {
+
+          alert(
+            'Recording is not supported by this browser.'
+          );
+
+          return;
+        }
+      }
+
+      mediaRecorder.ondataavailable =
+        event => {
+
+          if (
+            event.data &&
+            event.data.size > 0
+          ) {
+
+            recordedChunks.push(
+              event.data
+            );
+          }
+        };
+
+      mediaRecorder.onstop =
+        saveVideo;
+
+      mediaRecorder.start(
+        1000
+      );
+
+      isRecording = true;
+
+      recBtn.textContent =
+        '■ STOP & SAVE';
+
+      recBtn.classList.add(
+        'recording'
+      );
+
+      pauseBtn.disabled = false;
+
+      pauseBtn.textContent =
+        'PAUSE';
+
+      pauseBtn.classList.remove(
+        'paused'
+      );
+    }
+
+    function stopRecording() {
+
+      if (
+        mediaRecorder &&
+        mediaRecorder.state !==
+        'inactive'
+      ) {
+
+        try {
+          mediaRecorder.stop();
+        } catch (_) {}
+      }
+
+      isRecording = false;
+      isPaused = false;
+
+      recBtn.textContent =
+        '● START REC';
+
+      recBtn.classList.remove(
+        'recording'
+      );
+
+      pauseBtn.disabled = true;
+
+      pauseBtn.textContent =
+        'PAUSE';
+
+      pauseBtn.classList.remove(
+        'paused'
+      );
+    }
+
+    function saveVideo() {
+
+      if (!recordedChunks.length) {
+        return;
+      }
+
+      const mime =
+        mediaRecorder &&
+        mediaRecorder.mimeType
+          ? mediaRecorder.mimeType
+          : 'video/webm';
+
+      const blob =
+        new Blob(
+          recordedChunks,
+          { type: mime }
+        );
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+      const extension =
+        mime.includes('mp4')
+          ? 'mp4'
+          : 'webm';
+
+      const a =
+        document.createElement('a');
+
+      a.href = url;
+
+      a.download =
+        `vhs_${Date.now()}.${extension}`;
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      a.remove();
+
+      setTimeout(
+        () => {
+          URL.revokeObjectURL(
+            url
+          );
+        },
+        1000
+      );
+    }
+
+    /* =========================================================
+       CLEANUP
+       ========================================================= */
+
+    window.addEventListener(
+      'beforeunload',
+      () => {
+
+        stopContinuousZoom();
+
+        if (mediaStream) {
+
+          mediaStream
+            .getTracks()
+            .forEach(track => {
+              try {
+                track.stop();
+              } catch (_) {}
+            });
+        }
+
+        if (audioCtx) {
+
+          try {
+            audioCtx.close();
+          } catch (_) {}
+        }
+      }
+    );
+
+  </script>
+
+</body>
+</html>
