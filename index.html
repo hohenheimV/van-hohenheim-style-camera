@@ -45,7 +45,6 @@
       );
       background-size: 100% 4px;
       box-shadow: 0 0 20px rgba(0,0,0,0.8);
-      transition: transform 0.3s ease;
     }
 
     .controls {
@@ -75,9 +74,10 @@
       gap: 6px;
     }
 
-    /* Transition effect for smooth rotation when rotating device */
-    button, select, input, label, span {
+    /* CSS transition for spinning buttons */
+    .rotatable {
       transition: transform 0.3s ease;
+      display: inline-block;
     }
 
     button, select, input[type="date"], input[type="time"], input[type="text"] {
@@ -101,6 +101,12 @@
     button:disabled {
       opacity: 0.4;
       cursor: not-allowed;
+    }
+
+    #rotateBtn {
+      background: #0288d1;
+      color: #fff;
+      border-color: #03a9f4;
     }
 
     #stopCamBtn {
@@ -130,10 +136,9 @@
       min-width: 32px;
       text-align: center;
       color: #00ffcc;
-      display: inline-block;
     }
 
-    /* CSS classes for button rotation */
+    /* CSS classes for button rotation angles */
     .rotate-0 { transform: rotate(0deg); }
     .rotate-90 { transform: rotate(90deg); }
     .rotate-180 { transform: rotate(180deg); }
@@ -154,6 +159,7 @@
         <button id="startBtn" class="rotatable">Start Cam</button>
         <button id="stopCamBtn" class="rotatable" disabled>Stop Cam</button>
         <button id="recBtn" class="rotatable" disabled>Start Rec</button>
+        <button id="rotateBtn" class="rotatable">Rotate ↻</button>
       </div>
 
       <div class="control-group">
@@ -207,7 +213,7 @@
       </div>
     </div>
 
-    <!-- Retro Effects & Sensor Options -->
+    <!-- Retro Effects & Audio Options -->
     <div class="control-row">
       <div class="control-group">
         <label for="labelInput" class="rotatable">Label:</label>
@@ -225,9 +231,6 @@
       <div class="control-group">
         <label class="rotatable"><input type="checkbox" id="micToggle"> Mic</label>
       </div>
-      <div class="control-group">
-        <button id="sensorBtn" class="rotatable" style="display:none;">Enable Sensor</button>
-      </div>
     </div>
   </div>
 
@@ -242,6 +245,7 @@
     const startBtn = document.getElementById('startBtn');
     const stopCamBtn = document.getElementById('stopCamBtn');
     const recBtn = document.getElementById('recBtn');
+    const rotateBtn = document.getElementById('rotateBtn');
     const zoomInBtn = document.getElementById('zoomInBtn');
     const zoomOutBtn = document.getElementById('zoomOutBtn');
     const zoomResetBtn = document.getElementById('zoomResetBtn');
@@ -260,7 +264,6 @@
     const customTime = document.getElementById('customTime');
     const resetDateTimeBtn = document.getElementById('resetDateTimeBtn');
     const micToggle = document.getElementById('micToggle');
-    const sensorBtn = document.getElementById('sensorBtn');
 
     let zoomLevel = 1.0;
     let mediaRecorder;
@@ -268,7 +271,7 @@
     let isRecording = false;
     let animFrameId = null;
 
-    // Orientation Angle (0, 90, 180, 270)
+    // Manual Rotation Angle State (0, 90, 180, 270)
     let currentRotationAngle = 0;
 
     // Canvas Native Resolution State
@@ -284,53 +287,18 @@
     let micStreamSource = null;
     let processedAudioDestination = null;
 
-    // Device Sensor Orientation Handling
-    function handleOrientation(event) {
-      const beta = event.beta;   // Front-to-back tilt [-180, 180]
-      const gamma = event.gamma; // Left-to-right tilt [-90, 90]
+    // Rotate Button Click Handler
+    rotateBtn.addEventListener('click', () => {
+      currentRotationAngle = (currentRotationAngle + 90) % 360;
+      applyRotation(currentRotationAngle);
+    });
 
-      let newAngle = 0;
-
-      if (gamma > 45) {
-        newAngle = 90; // Rotated right
-      } else if (gamma < -45) {
-        newAngle = 270; // Rotated left
-      } else if (beta < -45) {
-        newAngle = 180; // Upside down
-      } else {
-        newAngle = 0; // Standard portrait
-      }
-
-      if (newAngle !== currentRotationAngle) {
-        currentRotationAngle = newAngle;
-        applyUIRotation(newAngle);
-      }
-    }
-
-    function applyUIRotation(angle) {
+    function applyRotation(angle) {
       const rotatableElements = document.querySelectorAll('.rotatable');
       rotatableElements.forEach(el => {
         el.classList.remove('rotate-0', 'rotate-90', 'rotate-180', 'rotate-270');
         el.classList.add(`rotate-${angle}`);
       });
-    }
-
-    // Check & Request Orientation Permissions (for iOS)
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      sensorBtn.style.display = 'inline-block';
-      sensorBtn.addEventListener('click', async () => {
-        try {
-          const response = await DeviceOrientationEvent.requestPermission();
-          if (response === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientation);
-            sensorBtn.style.display = 'none';
-          }
-        } catch (e) {
-          console.log(e);
-        }
-      });
-    } else {
-      window.addEventListener('deviceorientation', handleOrientation);
     }
 
     function updateCanvasDimensions() {
@@ -395,16 +363,15 @@
           video: { facingMode: "environment", width: 1280, height: 720 },
           audio: true
         });
-        
-        // Mute mic track immediately on start (Default Muted)
-        if (mediaStream.getAudioTracks().length > 0) {
-          mediaStream.getAudioTracks()[0].enabled = micToggle.checked;
-        }
+
+        // Initialize Audio Pipeline
+        setupAudioPipeline(mediaStream);
+
+        // Set initial mic state based on checkbox (default muted)
+        updateMicState();
 
         video.srcObject = mediaStream;
         video.play();
-
-        setupAudioPipeline(mediaStream);
 
         startBtn.disabled = true;
         stopCamBtn.disabled = false;
@@ -415,7 +382,7 @@
 
         processFrame();
       } catch (err) {
-        alert("Camera access failed: " + err.message);
+        alert("Camera/Mic access failed: " + err.message);
       }
     });
 
@@ -444,8 +411,9 @@
       zoomResetBtn.disabled = true;
     }
 
-    // Audio Pipeline with Retro Filter
+    // Audio Pipeline Repair & Set Up
     function setupAudioPipeline(stream) {
+      if (audioCtx) audioCtx.close();
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       processedAudioDestination = audioCtx.createMediaStreamDestination();
 
@@ -454,7 +422,7 @@
       lowPassFilter.frequency.setValueAtTime(2500, audioCtx.currentTime);
 
       const gainNode = audioCtx.createGain();
-      gainNode.gain.setValueAtTime(1.2, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(1.5, audioCtx.currentTime);
 
       lowPassFilter.connect(gainNode);
       gainNode.connect(processedAudioDestination);
@@ -465,23 +433,35 @@
       }
     }
 
-    micToggle.addEventListener('change', (e) => {
+    function updateMicState() {
       if (mediaStream && mediaStream.getAudioTracks().length > 0) {
-        mediaStream.getAudioTracks()[0].enabled = e.target.checked;
+        mediaStream.getAudioTracks().forEach(track => {
+          track.enabled = micToggle.checked;
+        });
       }
-    });
+      if (audioCtx && audioCtx.state === 'suspended' && micToggle.checked) {
+        audioCtx.resume();
+      }
+    }
+
+    micToggle.addEventListener('change', updateMicState);
 
     // Main Canvas Render Loop
     function processFrame() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
         ctx.save();
         
-        // Handle canvas rotation for video and overlay alignment based on sensor
+        // Handle canvas rotation for video and overlay alignment based on angle
         if (currentRotationAngle === 90) {
           ctx.translate(canvasWidth, 0);
           ctx.rotate(90 * Math.PI / 180);
           renderVideoFrame(canvasHeight, canvasWidth);
           applyEffectsAndOverlays(canvasHeight, canvasWidth);
+        } else if (currentRotationAngle === 180) {
+          ctx.translate(canvasWidth, canvasHeight);
+          ctx.rotate(180 * Math.PI / 180);
+          renderVideoFrame(canvasWidth, canvasHeight);
+          applyEffectsAndOverlays(canvasWidth, canvasHeight);
         } else if (currentRotationAngle === 270) {
           ctx.translate(0, canvasHeight);
           ctx.rotate(-90 * Math.PI / 180);
