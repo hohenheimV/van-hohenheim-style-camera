@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link rel="manifest" href="manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>VHS Cam Prototype</title>
   <style>
     @import url('https://fonts.cdnfonts.com/css/vcr-osd-mono');
@@ -106,6 +103,12 @@
       border-color: #03a9f4;
     }
 
+    #snapBtn {
+      background: #2e7d32;
+      color: #fff;
+      border-color: #4caf50;
+    }
+
     #stopCamBtn {
       background: #444;
     }
@@ -115,6 +118,11 @@
       color: white;
       border-color: #f44336;
       animation: pulse 1.5s infinite;
+    }
+
+    #pauseBtn.paused {
+      background: #f57c00;
+      border-color: #ff9800;
     }
 
     @keyframes pulse {
@@ -145,18 +153,20 @@
 
   <!-- Control Panel -->
   <div class="controls">
+    <!-- Row 1: Hardware & Recording Controls -->
     <div class="control-row">
       <div class="control-group">
         <button id="startBtn">Start Cam</button>
         <button id="stopCamBtn" disabled>Stop Cam</button>
         <button id="recBtn" disabled>Start Rec</button>
+        <button id="pauseBtn" disabled>Pause Rec</button>
+        <button id="snapBtn" disabled>Snap 📸</button>
         <button id="rotateBtn">Rotate Overlay ↻</button>
       </div>
 
       <div class="control-group">
         <label for="resSelect">Res:</label>
         <select id="resSelect">
-          <option value="1080p">1080p (Full HD)</option>
           <option value="720p">720p (HD Crisp)</option>
           <option value="480p" selected>480p (Retro VHS)</option>
           <option value="320p">320p (Low Quality)</option>
@@ -180,17 +190,19 @@
       </div>
     </div>
 
-    <!-- Date/Time Settings -->
+    <!-- Row 2: Date/Time & On-Screen Display Toggles -->
     <div class="control-row">
       <div class="control-group">
+        <label><input type="checkbox" id="recToggle" checked> REC Label</label>
         <label><input type="checkbox" id="dateToggle" checked> Timestamp</label>
+        <label><input type="checkbox" id="timerToggle" checked> Rec Timer</label>
       </div>
       <div class="control-group">
         <label for="formatSelect">Format:</label>
         <select id="formatSelect">
-          <option value="vhs_classic">PM 09 : 22 : 05 / 03 . OCT . 11</option>
-          <option value="ntsc">OCT 03 2011 / 09:22:05 PM</option>
-          <option value="pal">03/10/2011 / 21:22:05</option>
+          <option value="vhs_classic">03.oct.11 / 09:22 PM</option>
+          <option value="ntsc">09:22:05 PM / OCT 03 2011</option>
+          <option value="pal">21:22:05 / 03/10/2011</option>
         </select>
       </div>
       <div class="control-group">
@@ -206,11 +218,19 @@
       </div>
     </div>
 
-    <!-- Retro Effects & Audio Options -->
+    <!-- Row 3: Retro Effects, Color Styles & Audio Options -->
     <div class="control-row">
       <div class="control-group">
         <label for="labelInput">Label:</label>
         <input type="text" id="labelInput" value="PLAY" maxlength="12" style="width:70px;">
+      </div>
+      <div class="control-group">
+        <label for="styleFilterSelect">Filter Style:</label>
+        <select id="styleFilterSelect">
+          <option value="vhs" selected>Retro VHS Color</option>
+          <option value="crossprocess">Cross Processed</option>
+          <option value="technicolor">Technicolor 3-Strip</option>
+        </select>
       </div>
       <div class="control-group">
         <label><input type="checkbox" id="glitchToggle" checked> Color Shift</label>
@@ -234,21 +254,28 @@
     const canvas = document.getElementById('vhsCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Controls
+    // Hardware Controls
     const startBtn = document.getElementById('startBtn');
     const stopCamBtn = document.getElementById('stopCamBtn');
     const recBtn = document.getElementById('recBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const snapBtn = document.getElementById('snapBtn');
     const rotateBtn = document.getElementById('rotateBtn');
     const zoomInBtn = document.getElementById('zoomInBtn');
     const zoomOutBtn = document.getElementById('zoomOutBtn');
     const zoomResetBtn = document.getElementById('zoomResetBtn');
     const zoomVal = document.getElementById('zoomVal');
 
-    // Toggles & Formatting
+    // On-Screen Display Toggles
+    const recToggle = document.getElementById('recToggle');
+    const dateToggle = document.getElementById('dateToggle');
+    const timerToggle = document.getElementById('timerToggle');
+
+    // Toggles & Filters
     const resSelect = document.getElementById('resSelect');
     const aspectSelect = document.getElementById('aspectSelect');
     const labelInput = document.getElementById('labelInput');
-    const dateToggle = document.getElementById('dateToggle');
+    const styleFilterSelect = document.getElementById('styleFilterSelect');
     const glitchToggle = document.getElementById('glitchToggle');
     const grainToggle = document.getElementById('grainToggle');
     const trackingToggle = document.getElementById('trackingToggle');
@@ -262,7 +289,10 @@
     let mediaRecorder;
     let recordedChunks = [];
     let isRecording = false;
+    let isPaused = false;
     let recStartTime = 0;
+    let pausedTimeAccumulated = 0;
+    let pauseStartTimestamp = 0;
     let animFrameId = null;
 
     // Overlay Rotation Angle (0, 90, 180, 270)
@@ -290,10 +320,7 @@
       const resVal = resSelect.value;
       const is16by9 = aspectSelect.value === '16:9';
 
-      if (resVal === '1080p') {
-        canvasHeight = 1080;
-        canvasWidth = is16by9 ? 1920 : 1440;
-      } else if (resVal === '720p') {
+      if (resVal === '720p') {
         canvasHeight = 720;
         canvasWidth = is16by9 ? 1280 : 960;
       } else if (resVal === '320p') {
@@ -344,15 +371,61 @@
       zoomLevel = Math.min(Math.max(newZoom, 1.0), 3.0);
       zoomVal.textContent = zoomLevel.toFixed(1) + 'x';
     }
-    zoomInBtn.addEventListener('click', () => updateZoom(zoomLevel + 0.2));
-    zoomOutBtn.addEventListener('click', () => updateZoom(zoomLevel - 0.2));
-    zoomResetBtn.addEventListener('click', () => updateZoom(1.0));
+
+    let zoomTimer = null;
+
+    function startContinuousZoom(direction) {
+      // Do one step immediately
+      updateZoom(zoomLevel + direction);
+
+      // Then continue while held
+      if (zoomTimer) clearInterval(zoomTimer);
+
+      zoomTimer = setInterval(() => {
+        updateZoom(zoomLevel + direction);
+
+        // Stop automatically at the limits
+        if (zoomLevel >= 3.0 || zoomLevel <= 1.0) {
+          stopContinuousZoom();
+        }
+      }, 100); // zoom every 100ms
+    }
+
+    function stopContinuousZoom() {
+      if (zoomTimer) {
+        clearInterval(zoomTimer);
+        zoomTimer = null;
+      }
+    }
+
+    zoomInBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      startContinuousZoom(0.2);
+    });
+
+    zoomOutBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      startContinuousZoom(-0.2);
+    });
+
+    zoomInBtn.addEventListener('pointerup', stopContinuousZoom);
+    zoomInBtn.addEventListener('pointerleave', stopContinuousZoom);
+    zoomInBtn.addEventListener('pointercancel', stopContinuousZoom);
+
+    zoomOutBtn.addEventListener('pointerup', stopContinuousZoom);
+    zoomOutBtn.addEventListener('pointerleave', stopContinuousZoom);
+    zoomOutBtn.addEventListener('pointercancel', stopContinuousZoom);
+
+    zoomResetBtn.addEventListener('click', () => {
+      stopContinuousZoom();
+      updateZoom(1.0);
+    });
 
     // Hardware Control
     startBtn.addEventListener('click', async () => {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: { facingMode: "environment", width: { ideal: 3840 }, height: { ideal: 2160 } },
           audio: true
         });
 
@@ -365,6 +438,7 @@
         startBtn.disabled = true;
         stopCamBtn.disabled = false;
         recBtn.disabled = false;
+        snapBtn.disabled = false;
         zoomInBtn.disabled = false;
         zoomOutBtn.disabled = false;
         zoomResetBtn.disabled = false;
@@ -395,6 +469,8 @@
       startBtn.disabled = false;
       stopCamBtn.disabled = true;
       recBtn.disabled = true;
+      pauseBtn.disabled = true;
+      snapBtn.disabled = true;
       zoomInBtn.disabled = true;
       zoomOutBtn.disabled = true;
       zoomResetBtn.disabled = true;
@@ -438,10 +514,13 @@
     // Main Canvas Render Loop
     function processFrame() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        // Step 1: Draw Video Frame Base (Always Fixed & Upright)
+        // Step 1: Draw Video Frame Base
         renderVideoFrame(canvasWidth, canvasHeight);
 
-        // Step 2: Draw Rotated VHS Effects & Text Overlays Together
+        // Step 2: Apply Color Filter Preset
+        applyStyleFilter(canvasWidth, canvasHeight);
+
+        // Step 3: Draw Rotated VHS Effects & Text Overlays Together
         renderRotatedOverlayLayer(canvasWidth, canvasHeight);
       }
       animFrameId = requestAnimationFrame(processFrame);
@@ -453,6 +532,33 @@
       const sx = (video.videoWidth - sw) / 2;
       const sy = (video.videoHeight - sh) / 2;
       ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
+    }
+
+    function applyStyleFilter(w, h) {
+      const filter = styleFilterSelect.value;
+      if (filter === 'vhs') return; // Standard canvas output
+
+      const frameData = ctx.getImageData(0, 0, w, h);
+      const data = frameData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        let r = data[i], g = data[i + 1], b = data[i + 2];
+
+        if (filter === 'crossprocess') {
+          // Cross Processed: Crushed blacks, high saturation teal/yellow curve
+          data[i]     = Math.min(255, Math.pow(r / 255, 1.2) * 255 * 1.1);
+          data[i + 1] = Math.min(255, Math.pow(g / 255, 0.9) * 255 * 1.15);
+          data[i + 2] = Math.max(0, Math.pow(b / 255, 1.4) * 255 * 0.85);
+
+        } else if (filter === 'technicolor') {
+          // Technicolor 3-Strip: High color separation (deep red & vivid cyan/green)
+          data[i]     = Math.min(255, r * 1.35);
+          data[i + 1] = Math.min(255, g * 1.15);
+          data[i + 2] = Math.min(255, b * 0.85);
+        }
+      }
+
+      ctx.putImageData(frameData, 0, 0);
     }
 
     function renderRotatedOverlayLayer(w, h) {
@@ -479,22 +585,10 @@
     }
 
     function applyEffectsAndLabels(w, h) {
-      // Rotated Glitch Shift
-      if (glitchToggle.checked) {
-        applyGlitchEffect(w, h);
-      }
+      if (glitchToggle.checked) applyGlitchEffect(w, h);
+      if (grainToggle.checked) renderTapeGrain(w, h);
+      if (trackingToggle.checked) renderTrackingDistortion(w, h);
 
-      // Rotated Tape Grain
-      if (grainToggle.checked) {
-        renderTapeGrain(w, h);
-      }
-
-      // Rotated VCR Tracking
-      if (trackingToggle.checked) {
-        renderTrackingDistortion(w, h);
-      }
-
-      // Rotated Text & Timestamps
       drawTextContent(w, h);
     }
 
@@ -548,12 +642,17 @@
       const customText = labelInput.value.trim().toUpperCase();
       
       // Top Left Custom Label
-      if (customText) {
+      if (recToggle.checked && customText) {
         ctx.font = `${fontSize}px "VCR OSD Mono", monospace`;
         ctx.fillStyle = '#00ffcc';
         ctx.shadowColor = 'black';
         ctx.shadowBlur = Math.max(2, Math.floor(h * 0.008));
-        ctx.fillText(isRecording ? `REC ${customText}` : customText, pad, pad * 1.2);
+        
+        let displayLabel = customText;
+        if (isRecording) {
+          displayLabel = isPaused ? `PAUSE ${customText}` : `REC ${customText}`;
+        }
+        ctx.fillText(displayLabel, pad, pad * 1.2);
       }
 
       // Bottom Left Dynamic Timestamp
@@ -562,7 +661,7 @@
         const formatted = getFormattedDateTime(currentDynamicTime, formatSelect.value);
 
         ctx.font = `${Math.floor(fontSize * 0.9)}px "VCR OSD Mono", monospace`;
-        ctx.fillStyle = '#e6c229'; // Dynamic Yellow
+        ctx.fillStyle = '#e6c229';
         ctx.shadowColor = 'black';
         ctx.shadowBlur = Math.max(2, Math.floor(h * 0.008));
 
@@ -571,12 +670,18 @@
       }
 
       // Bottom Right Duration Timer
-      if (isRecording) {
-        const elapsedMs = Date.now() - recStartTime;
+      if (timerToggle.checked && isRecording) {
+        let elapsedMs = 0;
+        if (isPaused) {
+          elapsedMs = pauseStartTimestamp - recStartTime - pausedTimeAccumulated;
+        } else {
+          elapsedMs = Date.now() - recStartTime - pausedTimeAccumulated;
+        }
+
         const elapsedStr = formatRecordedDuration(elapsedMs);
 
         ctx.font = `${Math.floor(fontSize * 0.9)}px "VCR OSD Mono", monospace`;
-        ctx.fillStyle = '#ff3333';
+        ctx.fillStyle = isPaused ? '#ffaa00' : '#ff3333';
         ctx.shadowColor = 'black';
         ctx.shadowBlur = Math.max(2, Math.floor(h * 0.008));
         ctx.textAlign = 'right';
@@ -587,7 +692,7 @@
     }
 
     function formatRecordedDuration(ms) {
-      const totalSecs = Math.floor(ms / 1000);
+      const totalSecs = Math.floor(Math.max(0, ms) / 1000);
       const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
       const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
       const secs = String(totalSecs % 60).padStart(2, '0');
@@ -598,7 +703,7 @@
       const monthsShort = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
       const yrFull = d.getFullYear();
       const yr2Digit = String(yrFull).slice(-2);
-      const moName = monthsShort[d.getMonth()];
+      let moName = monthsShort[d.getMonth()];
       const dayPad = String(d.getDate()).padStart(2, '0');
       const dayNum = d.getDate();
 
@@ -619,22 +724,58 @@
           dateStr: `${dayPad}/${String(d.getMonth() + 1).padStart(2, '0')}/${yrFull}`
         };
       } else {
+        moName = moName.toLowerCase();
         return {
-          timeStr: `${ampm} ${hours12} : ${minsPad} : ${secsPad}`,
-          dateStr: `${dayNum} . ${moName} . ${yr2Digit}`
+          // swap date top time bottom
+          timeStr: `${dayNum}.${moName}.${yr2Digit}`,
+          dateStr: `${hours12}:${minsPad} ${ampm}`
         };
       }
     }
 
-    // Recording Logic
+    // Snap Picture Handler
+    snapBtn.addEventListener('click', () => {
+      const snapshotUrl = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = snapshotUrl;
+      a.download = `vhs_snap_${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    // Recording Logic with Pause / Resume
     recBtn.addEventListener('click', () => {
       if (!isRecording) startRecording();
       else stopRecording();
     });
 
+    pauseBtn.addEventListener('click', () => {
+      if (!isRecording) return;
+
+      if (!isPaused) {
+        // Pause recording
+        mediaRecorder.pause();
+        isPaused = true;
+        pauseStartTimestamp = Date.now();
+        pauseBtn.textContent = 'Resume Rec';
+        pauseBtn.classList.add('paused');
+      } else {
+        // Resume recording
+        pausedTimeAccumulated += (Date.now() - pauseStartTimestamp);
+        mediaRecorder.resume();
+        isPaused = false;
+        pauseBtn.textContent = 'Pause Rec';
+        pauseBtn.classList.remove('paused');
+      }
+    });
+
     function startRecording() {
       recordedChunks = [];
       recStartTime = Date.now();
+      pausedTimeAccumulated = 0;
+      isPaused = false;
+
       const canvasStream = canvas.captureStream(30);
       
       const tracks = [...canvasStream.getVideoTracks()];
@@ -665,6 +806,9 @@
       isRecording = true;
       recBtn.textContent = 'Stop & Save';
       recBtn.classList.add('recording');
+      pauseBtn.disabled = false;
+      pauseBtn.textContent = 'Pause Rec';
+      pauseBtn.classList.remove('paused');
     }
 
     function stopRecording() {
@@ -672,8 +816,12 @@
         mediaRecorder.stop();
       }
       isRecording = false;
+      isPaused = false;
       recBtn.textContent = 'Start Rec';
       recBtn.classList.remove('recording');
+      pauseBtn.disabled = true;
+      pauseBtn.textContent = 'Pause Rec';
+      pauseBtn.classList.remove('paused');
     }
 
     function saveVideo() {
