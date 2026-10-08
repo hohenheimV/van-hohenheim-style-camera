@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#050505">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <title>VHS Cam — Prototypes</title>
+
+  <style>
+    @import url('https://fonts.cdnfonts.com/css/vcr-osd-mono');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      background: #050505;
+      color: #fff;
+      font-family: 'VCR OSD Mono', monospace;
+      overflow: hidden;
+    }
+
+    /* -----------------------------
+       CRT SCREEN
+    ----------------------------- */
+
+    .screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 100dvh;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background:
+        radial-gradient(
+          ellipse at center,
+          rgba(25, 25, 25, 0.45) 0%,
+          rgba(5, 5, 5, 1) 75%
+        );
+
+      overflow: hidden;
+    }
+
+    /* Scanlines */
+    .screen::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.035) 0px,
+          rgba(255, 255, 255, 0.035) 1px,
+          rgba(0, 0, 0, 0.08) 2px,
+          rgba(0, 0, 0, 0.08) 4px
+        );
+
+      mix-blend-mode: overlay;
+    }
+
+    /* CRT vignette */
+    .screen::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 21;
+      pointer-events: none;
+
+      background:
+        radial-gradient(
+          ellipse at center,
+          transparent 50%,
+          rgba(0, 0, 0, 0.25) 75%,
+          rgba(0, 0, 0, 0.75) 100%
+        );
+    }
+
+    /* -----------------------------
+       CONTENT
+    ----------------------------- */
+
+    .container {
+      position: relative;
+      z-index: 10;
+
+      width: min(90%, 620px);
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      text-align: center;
+    }
+
+    .status {
+      margin-bottom: 18px;
+
+      color: #00ffcc;
+      font-size: 11px;
+      letter-spacing: 2px;
+
+      text-shadow:
+        0 0 5px rgba(0, 255, 204, 0.5);
+
+      animation: flicker 4s infinite;
+    }
+
+    .title {
+      margin: 0;
+
+      font-size: clamp(28px, 7vw, 54px);
+      font-weight: normal;
+      letter-spacing: 4px;
+
+      color: #fff;
+
+      text-shadow:
+        2px 0 #00cccc,
+        -2px 0 #ff0044,
+        0 0 12px rgba(255, 255, 255, 0.2);
+
+      animation: titleFlicker 6s infinite;
+    }
+
+    .subtitle {
+      margin: 12px 0 42px;
+
+      color: #888;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    /* -----------------------------
+       PROTOTYPE BUTTONS
+    ----------------------------- */
+
+    .prototype-list {
+      width: 100%;
+
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .proto-btn {
+      position: relative;
+
+      width: 100%;
+      min-height: 68px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      padding: 0 22px;
+
+      background: #111;
+      color: #fff;
+
+      border: 1px solid #444;
+      border-radius: 3px;
+
+      font-family: 'VCR OSD Mono', monospace;
+      font-size: 15px;
+      letter-spacing: 2px;
+
+      cursor: pointer;
+
+      transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease,
+        box-shadow 0.15s ease;
+
+      overflow: hidden;
+    }
+
+    /* VHS noise stripe */
+    .proto-btn::before {
+      content: "";
+
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+
+      height: 2px;
+
+      background: #333;
+
+      transition: background 0.15s ease;
+    }
+
+    /* Glitch highlight */
+    .proto-btn::after {
+      content: "";
+
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -100%;
+
+      width: 35%;
+
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.08),
+        transparent
+      );
+
+      transition: left 0.4s ease;
+    }
+
+    .proto-btn:hover {
+      background: #191919;
+      border-color: #00ffcc;
+
+      box-shadow:
+        0 0 10px rgba(0, 255, 204, 0.15),
+        inset 0 0 12px rgba(0, 255, 204, 0.04);
+
+      transform: translateY(-1px);
+    }
+
+    .proto-btn:hover::before {
+      background: #00ffcc;
+    }
+
+    .proto-btn:hover::after {
+      left: 110%;
+    }
+
+    .proto-btn:active {
+      transform: translateY(1px);
+      background: #252525;
+    }
+
+    .proto-btn:focus-visible {
+      outline: 2px solid #00ffcc;
+      outline-offset: 3px;
+    }
+
+    .proto-name {
+      color: #fff;
+    }
+
+    .proto-arrow {
+      color: #666;
+      font-size: 18px;
+
+      transition:
+        color 0.15s ease,
+        transform 0.15s ease;
+    }
+
+    .proto-btn:hover .proto-arrow {
+      color: #00ffcc;
+      transform: translateX(4px);
+    }
+
+    /* Different accent for Proto 2 */
+    .proto-btn.proto-two:hover {
+      border-color: #ff3366;
+
+      box-shadow:
+        0 0 10px rgba(255, 51, 102, 0.15),
+        inset 0 0 12px rgba(255, 51, 102, 0.04);
+    }
+
+    .proto-btn.proto-two:hover::before {
+      background: #ff3366;
+    }
+
+    .proto-btn.proto-two:hover .proto-arrow {
+      color: #ff3366;
+    }
+
+    /* -----------------------------
+       FOOTER
+    ----------------------------- */
+
+    .footer {
+      margin-top: 34px;
+
+      color: #444;
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+
+    .footer span {
+      color: #666;
+    }
+
+    /* -----------------------------
+       ANIMATIONS
+    ----------------------------- */
+
+    @keyframes flicker {
+      0%,
+      18%,
+      20%,
+      22%,
+      63%,
+      64%,
+      65%,
+      100% {
+        opacity: 1;
+      }
+
+      19%,
+      21%,
+      64% {
+        opacity: 0.55;
+      }
+    }
+
+    @keyframes titleFlicker {
+      0%,
+      94%,
+      96%,
+      100% {
+        opacity: 1;
+      }
+
+      95% {
+        opacity: 0.75;
+      }
+
+      97% {
+        opacity: 0.9;
+      }
+    }
+
+    /* -----------------------------
+       MOBILE
+    ----------------------------- */
+
+    @media (max-width: 600px) {
+      .container {
+        width: min(88%, 420px);
+      }
+
+      .subtitle {
+        margin-bottom: 32px;
+      }
+
+      .proto-btn {
+        min-height: 62px;
+        padding: 0 18px;
+        font-size: 13px;
+      }
+    }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="screen">
+
+    <div class="container">
+
+      <div class="status">
+        VHS CAM // PROTOTYPE SELECT
+      </div>
+
+      <h1 class="title">
+        VHS CAM
+      </h1>
+
+      <p class="subtitle">
+        SELECT A PROTOTYPE
+      </p>
+
+      <div class="prototype-list">
+
+        <button
+          class="proto-btn proto-one"
+          type="button"
+          onclick="window.location.href='/proto1.html'"
+        >
+          <span class="proto-name">PROTO 1</span>
+          <span class="proto-arrow">›</span>
+        </button>
+
+        <button
+          class="proto-btn proto-two"
+          type="button"
+          onclick="window.location.href='/proto2.html'"
+        >
+          <span class="proto-name">PROTO 2</span>
+          <span class="proto-arrow">›</span>
+        </button>
+
+      </div>
+
+      <div class="footer">
+        SYSTEM READY <span>//</span> SELECT TO CONTINUE
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (event) => {
+      if (event.key === '1') {
+        window.location.href = '/proto1.html';
+      }
+
+      if (event.key === '2') {
+        window.location.href = '/proto2.html';
+      }
+    });
+  </script>
+
+</body>
+</html>
