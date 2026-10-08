@@ -147,14 +147,16 @@
         <button id="startBtn">Start Cam</button>
         <button id="stopCamBtn" disabled>Stop Cam</button>
         <button id="recBtn" disabled>Start Rec</button>
-        <button id="rotateBtn">Rotate ↻</button>
+        <button id="rotateBtn">Rotate Label ↻</button>
       </div>
 
       <div class="control-group">
         <label for="resSelect">Res:</label>
         <select id="resSelect">
-          <option value="480p">640x480 (480p)</option>
-          <option value="320p">426x320 (320p)</option>
+          <option value="1080p">1080p (Full HD)</option>
+          <option value="720p">720p (HD Crisp)</option>
+          <option value="480p" selected>480p (Retro VHS)</option>
+          <option value="320p">320p (Low Quality)</option>
         </select>
       </div>
 
@@ -260,8 +262,8 @@
     let recStartTime = 0;
     let animFrameId = null;
 
-    // Camera Canvas Rotation Angle (0, 90, 180, 270)
-    let currentRotationAngle = 0;
+    // Camera Label Overlay Rotation Angle (0, 90, 180, 270)
+    let labelRotationAngle = 0;
 
     // Canvas Native Resolution State
     let canvasWidth = 640;
@@ -276,22 +278,29 @@
     let micStreamSource = null;
     let processedAudioDestination = null;
 
-    // Camera Canvas Rotate Handler
+    // Rotate Only Labels Handler
     rotateBtn.addEventListener('click', () => {
-      currentRotationAngle = (currentRotationAngle + 90) % 360;
+      labelRotationAngle = (labelRotationAngle + 90) % 360;
     });
 
     function updateCanvasDimensions() {
-      const is320p = resSelect.value === '320p';
+      const resVal = resSelect.value;
       const is16by9 = aspectSelect.value === '16:9';
 
-      if (is320p) {
-        canvasWidth = is16by9 ? 568 : 426;
+      if (resVal === '1080p') {
+        canvasHeight = 1080;
+        canvasWidth = is16by9 ? 1920 : 1440;
+      } else if (resVal === '720p') {
+        canvasHeight = 720;
+        canvasWidth = is16by9 ? 1280 : 960;
+      } else if (resVal === '320p') {
         canvasHeight = 320;
-      } else {
-        canvasWidth = is16by9 ? 854 : 640;
+        canvasWidth = is16by9 ? 568 : 426;
+      } else { // 480p default
         canvasHeight = 480;
+        canvasWidth = is16by9 ? 854 : 640;
       }
+
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
     }
@@ -340,14 +349,11 @@
     startBtn.addEventListener('click', async () => {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: 1280, height: 720 },
+          video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: true
         });
 
-        // Initialize Audio Pipeline
         setupAudioPipeline(mediaStream);
-
-        // Set initial mic state based on checkbox (default muted)
         updateMicState();
 
         video.srcObject = mediaStream;
@@ -429,69 +435,39 @@
     // Main Canvas Render Loop
     function processFrame() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        ctx.save();
-        
-        // Handle canvas rotation for video and retro overlay
-        if (currentRotationAngle === 90) {
-          ctx.translate(canvasWidth, 0);
-          ctx.rotate(90 * Math.PI / 180);
-          renderVideoFrame(canvasHeight, canvasWidth);
-          applyEffectsAndOverlays(canvasHeight, canvasWidth);
-        } else if (currentRotationAngle === 180) {
-          ctx.translate(canvasWidth, canvasHeight);
-          ctx.rotate(180 * Math.PI / 180);
-          renderVideoFrame(canvasWidth, canvasHeight);
-          applyEffectsAndOverlays(canvasWidth, canvasHeight);
-        } else if (currentRotationAngle === 270) {
-          ctx.translate(0, canvasHeight);
-          ctx.rotate(-90 * Math.PI / 180);
-          renderVideoFrame(canvasHeight, canvasWidth);
-          applyEffectsAndOverlays(canvasHeight, canvasWidth);
-        } else {
-          renderVideoFrame(canvasWidth, canvasHeight);
-          applyEffectsAndOverlays(canvasWidth, canvasHeight);
-        }
+        // Render Camera Video (Unrotated Frame)
+        renderVideoFrame(canvasWidth, canvasHeight);
 
-        ctx.restore();
+        // Apply Glitch / Grain / VCR Effects
+        if (glitchToggle.checked) applyGlitchEffect(canvasWidth, canvasHeight);
+        if (grainToggle.checked) renderTapeGrain(canvasWidth, canvasHeight);
+        if (trackingToggle.checked) renderTrackingDistortion(canvasWidth, canvasHeight);
+
+        // Render Rotated Overlays / Labels Only
+        renderRotatedOverlays(canvasWidth, canvasHeight);
       }
       animFrameId = requestAnimationFrame(processFrame);
     }
 
     function renderVideoFrame(w, h) {
-      const sw = w / zoomLevel;
-      const sh = h / zoomLevel;
-      const sx = (w - sw) / 2;
-      const sy = (h - sh) / 2;
+      const sw = video.videoWidth / zoomLevel;
+      const sh = video.videoHeight / zoomLevel;
+      const sx = (video.videoWidth - sw) / 2;
+      const sy = (video.videoHeight - sh) / 2;
       ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
     }
 
-    function applyEffectsAndOverlays(w, h) {
-      // Effect 1: RGB Color Shift Glitch
-      if (glitchToggle.checked) {
-        const frameData = ctx.getImageData(0, 0, w, h);
-        const data = frameData.data;
+    function applyGlitchEffect(w, h) {
+      const frameData = ctx.getImageData(0, 0, w, h);
+      const data = frameData.data;
 
-        for (let i = 0; i < data.length; i += 4) {
-          if (i + 12 < data.length) {
-            data[i] = data[i + 12];
-          }
-          data[i + 1] = data[i + 1] * 0.88;
+      for (let i = 0; i < data.length; i += 4) {
+        if (i + 12 < data.length) {
+          data[i] = data[i + 12];
         }
-        ctx.putImageData(frameData, 0, 0);
+        data[i + 1] = data[i + 1] * 0.88;
       }
-
-      // Effect 2: Animated Tape Grain / White Noise
-      if (grainToggle.checked) {
-        renderTapeGrain(w, h);
-      }
-
-      // Effect 3: VCR Tracking Distortion
-      if (trackingToggle.checked) {
-        renderTrackingDistortion(w, h);
-      }
-
-      // Overlays & Text
-      renderOverlays(w, h);
+      ctx.putImageData(frameData, 0, 0);
     }
 
     function renderTapeGrain(w, h) {
@@ -512,9 +488,9 @@
 
     function renderTrackingDistortion(w, h) {
       if (Math.random() < 0.35) {
-        const jitterY = h - Math.floor(Math.random() * 35) - 10;
-        const jitterHeight = Math.floor(Math.random() * 8) + 2;
-        const shiftX = (Math.random() - 0.5) * 16;
+        const jitterY = h - Math.floor(Math.random() * (h * 0.08)) - Math.floor(h * 0.02);
+        const jitterHeight = Math.floor(Math.random() * (h * 0.02)) + 2;
+        const shiftX = (Math.random() - 0.5) * (w * 0.025);
 
         const sliceData = ctx.getImageData(0, jitterY, w, jitterHeight);
         ctx.putImageData(sliceData, shiftX, jitterY);
@@ -524,16 +500,43 @@
       }
     }
 
-    function renderOverlays(w, h) {
+    // Render Crisp Labels with Dynamic Rotation
+    function renderRotatedOverlays(w, h) {
+      ctx.save();
+
+      // Transform coordinate space for label rotation inside camera
+      if (labelRotationAngle === 90) {
+        ctx.translate(w, 0);
+        ctx.rotate(90 * Math.PI / 180);
+        drawTextContent(h, w);
+      } else if (labelRotationAngle === 180) {
+        ctx.translate(w, h);
+        ctx.rotate(180 * Math.PI / 180);
+        drawTextContent(w, h);
+      } else if (labelRotationAngle === 270) {
+        ctx.translate(0, h);
+        ctx.rotate(-90 * Math.PI / 180);
+        drawTextContent(h, w);
+      } else {
+        drawTextContent(w, h);
+      }
+
+      ctx.restore();
+    }
+
+    function drawTextContent(w, h) {
+      const fontSize = Math.max(18, Math.floor(h * 0.045));
+      const pad = Math.floor(h * 0.05);
+
       const customText = labelInput.value.trim().toUpperCase();
       
-      // Top Left Label
+      // Top Left Custom Label
       if (customText) {
-        ctx.font = '22px "VCR OSD Mono", monospace';
+        ctx.font = `${fontSize}px "VCR OSD Mono", monospace`;
         ctx.fillStyle = '#00ffcc';
         ctx.shadowColor = 'black';
-        ctx.shadowBlur = 4;
-        ctx.fillText(isRecording ? `REC ${customText}` : customText, 25, 45);
+        ctx.shadowBlur = Math.max(2, Math.floor(h * 0.008));
+        ctx.fillText(isRecording ? `REC ${customText}` : customText, pad, pad * 1.2);
       }
 
       // Bottom Left Dynamic Timestamp
@@ -541,28 +544,28 @@
         const currentDynamicTime = new Date(Date.now() + baseTimeOffset);
         const formatted = getFormattedDateTime(currentDynamicTime, formatSelect.value);
 
-        ctx.font = '20px "VCR OSD Mono", monospace';
-        ctx.fillStyle = '#e6c229'; // Classic VHS Yellow
+        ctx.font = `${Math.floor(fontSize * 0.9)}px "VCR OSD Mono", monospace`;
+        ctx.fillStyle = '#e6c229'; // Dynamic Yellow
         ctx.shadowColor = 'black';
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = Math.max(2, Math.floor(h * 0.008));
 
-        ctx.fillText(formatted.timeStr, 25, h - 55);
-        ctx.fillText(formatted.dateStr, 25, h - 28);
+        ctx.fillText(formatted.timeStr, pad, h - (pad * 1.1));
+        ctx.fillText(formatted.dateStr, pad, h - (pad * 0.4));
       }
 
-      // Bottom Right Recorded Duration Timer
+      // Bottom Right Duration Timer
       if (isRecording) {
         const elapsedMs = Date.now() - recStartTime;
         const elapsedStr = formatRecordedDuration(elapsedMs);
 
-        ctx.font = '20px "VCR OSD Mono", monospace';
-        ctx.fillStyle = '#ff3333'; // Vibrant Red Recording Counter
+        ctx.font = `${Math.floor(fontSize * 0.9)}px "VCR OSD Mono", monospace`;
+        ctx.fillStyle = '#ff3333';
         ctx.shadowColor = 'black';
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = Math.max(2, Math.floor(h * 0.008));
         ctx.textAlign = 'right';
 
-        ctx.fillText(elapsedStr, w - 25, h - 28);
-        ctx.textAlign = 'left'; // Reset alignment
+        ctx.fillText(elapsedStr, w - pad, h - (pad * 0.4));
+        ctx.textAlign = 'left';
       }
     }
 
