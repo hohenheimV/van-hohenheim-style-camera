@@ -2,39 +2,166 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard Utama</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f7fafc;
+    }
+
+    /* Bahagian Menu Atas / Tiles Dashboard */
+    #dashboard-home {
+      padding: 40px;
+      text-align: center;
+    }
+
+    .tile-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .tile {
+      background: white;
+      padding: 25px 40px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      cursor: pointer;
+      font-weight: bold;
+      color: #1a365d;
+      border: 2px solid #2b6cb0;
+      transition: all 0.2s ease;
+    }
+
+    .tile:hover {
+      background-color: #2b6cb0;
+      color: white;
+      transform: translateY(-3px);
+    }
+
+    /* Kotak paparan modul penuh (menggantikan isi) */
+    #app-container {
+      width: 100%;
+      min-height: 100vh;
+      background: white;
+    }
+
+    /* Butang Kembali ke Dashboard asal */
+    .back-btn-float {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      z-index: 9999;
+      background-color: #e53e3e;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .back-btn-float:hover {
+      background-color: #c53030;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
 
-  <!-- Menu / Tiles -->
-  <div id="navigation">
-    <button onclick="loadModule('penyata.html')">Modul A</button>
-    <button onclick="loadModule('module-b.html')">Modul B</button>
-  </div>
-
-  <hr>
-
-  <!-- Bekas tempat kandungan modul dimuatkan -->
-  <div id="main-content">
+  <!-- Menu Utama / Tiles Dashboard -->
+  <div id="dashboard-home">
     <h2>Selamat Datang ke Dashboard</h2>
-    <p>Pilih modul di atas untuk bermula.</p>
+    <p>Sila pilih modul di bawah:</p>
+    
+    <div class="tile-container">
+      <div class="tile" onclick="loadFullModule('penyata.html')">
+        📊 Modul Penyata Kewangan PPKI 2026
+      </div>
+      <!-- Boleh tambah tile lain di sini -->
+      <!-- <div class="tile" onclick="loadFullModule('module-b.html')">📁 Modul B</div> -->
+    </div>
   </div>
+
+  <!-- Bekas untuk memuatkan keseluruhan fail HTML modul -->
+  <div id="app-container"></div>
 
   <script>
-    async function loadModule(file) {
+    async function loadFullModule(file) {
       try {
-        const response = await fetch(`${file}`);
-        if (!response.ok) throw new Error('Gagal memuatkan modul');
+        const response = await fetch(file);
+        if (!response.ok) throw new Error('Gagal memuatkan fail modul.');
         
-        const htmlContent = await response.text();
+        const htmlText = await response.text();
         
-        // Tukar / ganti elemen kandungan
-        document.getElementById('main-content').innerHTML = htmlContent;
-        
+        // Parse teks HTML luar
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+
+        // Sembunyikan menu utama dashboard
+        document.getElementById('dashboard-home').classList.add('hidden');
+
+        const appContainer = document.getElementById('app-container');
+        appContainer.innerHTML = ''; // Kosongkan dulu
+
+        // Masukkan butang "Kembali ke Dashboard" terapung di atas modul
+        const backButton = document.createElement('button');
+        backButton.className = 'back-btn-float no-print';
+        backButton.innerHTML = '⬅️ Kembali ke Menu Utama';
+        backButton.onclick = resetToDashboard;
+        appContainer.appendChild(backButton);
+
+        // Ambil gaya CSS (<style>) dari fail modul dan masukkan ke dalam dokumen
+        doc.querySelectorAll('style').forEach(style => {
+          const newStyle = document.createElement('style');
+          newStyle.textContent = style.textContent;
+          appContainer.appendChild(newStyle);
+        });
+
+        // Masukkan kandungan <body> dari fail modul
+        const contentWrapper = document.createElement('div');
+        contentWrapper.innerHTML = doc.body.innerHTML;
+        appContainer.appendChild(contentWrapper);
+
+        // Jalankan semula skrip (<script>) yang mungkin ada dalam fail modul tersebut
+        doc.querySelectorAll('script').forEach(script => {
+          const newScript = document.createElement('script');
+          if (script.src) {
+            newScript.src = script.src;
+          } else {
+            newScript.textContent = script.textContent;
+          }
+          document.body.appendChild(newScript);
+        });
+
+        // Ubah URL state browser tanpa refresh (cantik untuk GitHub Pages)
+        window.history.pushState({ module: file }, '', `#${file.replace('.html', '')}`);
+
       } catch (err) {
-        document.getElementById('main-content').innerHTML = '<p>Ralat memuatkan fail.</p>';
+        alert('Ralat: ' + err.message);
       }
     }
+
+    function resetToDashboard() {
+      document.getElementById('app-container').innerHTML = '';
+      document.getElementById('dashboard-home').classList.remove('hidden');
+      window.history.pushState({}, '', window.location.pathname);
+    }
+
+    // Sokongan butang Back/Forward browser
+    window.addEventListener('popstate', () => {
+      if (!window.location.hash) {
+        resetToDashboard();
+      }
+    });
   </script>
 </body>
 </html>
