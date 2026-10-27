@@ -23,7 +23,7 @@
   <script>
     async function loadModule(file) {
       try {
-        const response = await fetch(`modules/${file}`);
+        const response = await fetch(`${file}`);
         if (!response.ok) throw new Error('Gagal memuatkan modul');
         
         const htmlContent = await response.text();
