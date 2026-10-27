@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penyata Kewangan Majlis Apresiasi & Sambutan Hari Lahir PPKI 2026</title>
+    <title>Penyata Kewangan Interactive - PPKI 2026</title>
     <style>
         :root {
             --primary-color: #1a365d;
@@ -11,14 +11,15 @@
             --accent-color: #edf2f7;
             --border-color: #cbd5e0;
             --text-color: #2d3748;
+            --danger-color: #e53e3e;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             color: var(--text-color);
-            line-height: 0.75;
+            line-height: 1.2;
             margin: 0;
-            padding: 40px;
+            padding: 20px;
             background-color: #f7fafc;
         }
 
@@ -26,7 +27,7 @@
             max-width: 900px;
             margin: 0 auto;
             background: #ffffff;
-            padding: 50px;
+            padding: 30px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
         }
@@ -35,11 +36,12 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            margin-bottom: 10px;
         }
 
         .logo {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             object-fit: contain;
             flex-shrink: 0;
         }
@@ -51,41 +53,33 @@
         .header-text h3 {
             margin: 0;
             text-align: center;
-        }
-
-        .header h1 {
-            color: var(--primary-color);
-            margin: 0;
-            font-size: 20px;
+            font-size: 16px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .header p {
-            margin: 5px 0 0;
-            color: #718096;
-            font-size: 12px;
         }
 
         .section-title {
             color: var(--secondary-color);
-            font-size: 12px;
+            font-size: 11px;
+            font-weight: bold;
             border-bottom: 2px solid var(--secondary-color);
-            padding-bottom: 5px;
-            margin-top: 20px;
-            margin-bottom: 10px;
+            padding-bottom: 3px;
+            margin-top: 15px;
+            margin-bottom: 8px;
             text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
-            font-size: 12px;
+            margin-bottom: 8px;
+            font-size: 11px;
         }
 
         th, td {
-            padding: 10px 12px;
+            padding: 5px 8px;
             border: 1px solid var(--border-color);
             text-align: left;
         }
@@ -104,6 +98,20 @@
         .text-right { text-align: right; }
         .font-bold { font-weight: bold; }
 
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: inherit;
+            box-sizing: border-box;
+        }
+
+        input[type="number"] {
+            text-align: right;
+        }
+
         .total-row {
             background-color: var(--accent-color) !important;
             font-weight: bold;
@@ -112,9 +120,10 @@
         .summary-box {
             display: flex;
             justify-content: space-between;
-            margin-top: 20px;
+            align-items: center;
+            margin-top: 15px;
             background-color: var(--accent-color);
-            padding: 20px;
+            padding: 12px 20px;
             border-radius: 6px;
             border-left: 4px solid var(--secondary-color);
         }
@@ -124,260 +133,201 @@
         }
 
         .summary-item .label {
-            font-size: 12px;
+            font-size: 10px;
             color: #4a5568;
             text-transform: uppercase;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
 
         .summary-item .value {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             color: var(--primary-color);
         }
         
         .summary-item .symbol {
-            font-size: 28px;
+            font-size: 20px;
             font-weight: bold;
             color: var(--primary-color);
         }
 
         .signature-section {
-            margin-top: 20px;
+            margin-top: 30px;
             display: flex;
             justify-content: space-between;
         }
 
         .signature-box {
-            width: 45%;
+            width: 40%;
             text-align: center;
+            font-size: 11px;
         }
 
         .signature-line {
             border-bottom: 1px solid #000;
-            margin-top: 60px;
+            margin-top: 45px;
             margin-bottom: 5px;
         }
 
+        .btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-color);
+        }
+
+        .btn-add {
+            background-color: #38a169;
+        }
+        .btn-add:hover {
+            background-color: #2f855a;
+        }
+
+        .btn-del {
+            background-color: var(--danger-color);
+            padding: 2px 6px;
+            font-size: 10px;
+        }
+        .btn-del:hover {
+            background-color: #c53030;
+        }
+
+        .print-btn {
+            display: block;
+            width: 200px;
+            margin: 0 auto 15px auto;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        /* PRINT STYLES FOR EXACT 1-PAGE A4 PORTRAIT */
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
             body {
                 background: white;
                 padding: 0;
             }
             .document-container {
                 box-shadow: none;
-                padding: 20px;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
             }
-            .no-print {
-                display: none;
+            .no-print, .btn-del, .btn-add {
+                display: none !important;
             }
-        }
-
-        .print-btn {
-            display: block;
-            width: 200px;
-            margin: 0 auto 20px auto;
-            padding: 10px 20px;
-            background-color: var(--secondary-color);
-            color: white;
-            text-align: center;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .print-btn:hover {
-            background-color: var(--primary-color);
+            input {
+                border: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+            }
+            input[type="number"]::-webkit-inner-spin-button,
+            input[type="number"]::-webkit-outer-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
         }
     </style>
 </head>
 <body>
 
-    <!-- <button class="print-btn no-print" onclick="window.print()">Cetak / Simpan PDF</button> -->
+    <button class="btn print-btn no-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
 
     <div class="document-container">
-        <!-- Header -->
-        <!-- <div class="header">
-            <h1>Penyata Kewangan</h1>
-            <p>Majlis Apresiasi & Sambutan Hari Lahir PPKI 2026</p>
-        </div> -->
         <!-- Header with Logo -->
         <div class="header">
-            <img src="test3.png"
-                alt="Lencana Sekolah"
-                class="logo"
-                style="width: 80px; height: 80px; object-fit: contain;">
-
+            <img src="test3.png" alt="Lencana Sekolah" class="logo" onerror="this.style.display='none'">
             <div class="header-text">
-                <h3 style="line-height: 2;">PENYATA KEWANGAN MAJLIS APRESIASI DAN SAMBUTAN HARI LAHIR PPKI 2026</h3>
+                <h3 contenteditable="true">PENYATA KEWANGAN MAJLIS APRESIASI DAN SAMBUTAN HARI LAHIR PPKI 2026</h3>
             </div>
         </div>
 
         <!-- Section A: Pendapatan -->
-        <div class="section-title">A. Ringkasan Pendapatan</div>
-        <table>
-            <thead>
-                <tr>
-                    <th class="text-center" style="width: 10%;">Bil.</th>
-                    <th>Sumber Pendapatan</th>
-                    <th class="text-right" style="width: 30%;">Jumlah (RM)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="text-center">1</td>
-                    <td>Dana PPKI</td>
-                    <td class="text-right">2,000.00</td>
-                </tr>
-                <tr>
-                    <td class="text-center">2</td>
-                    <td>Tabung Murid</td>
-                    <td class="text-right">1,000.00</td>
-                </tr>
-                <tr>
-                    <td class="text-center">3</td>
-                    <td>Dana Waris</td>
-                    <td class="text-right">1,600.00</td>
-                </tr>
-                <tr>
-                    <td class="text-center">4</td>
-                    <td>Sumbangan Waris</td>
-                    <td class="text-right">400.00</td>
-                </tr>
-                <tr>
-                    <td class="text-center">5</td>
-                    <td>Sumbangan Guru</td>
-                    <td class="text-right">260.00</td>
-                </tr>
-                <tr>
-                    <td class="text-center">6</td>
-                    <td>Sumbangan Bunga / Bouquet Murid</td>
-                    <td class="text-right">240.00</td>
-                </tr>
-                <tr>
-                    <td class="text-center">7</td>
-                    <td>Sumbangan Individu</td>
-                    <td class="text-right">820.00</td>
-                </tr>
-                <tr class="total-row">
-                    <td colspan="2" class="text-right">JUMLAH KESELURUHAN PENDAPATAN</td>
-                    <td class="text-right">RM 6,320.00</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <!-- Section B: Perbelanjaan -->
-        <div class="section-title">B. Ringkasan Perbelanjaan</div>
+        <div class="section-title">
+            <span>A. Ringkasan Pendapatan</span>
+            <button class="btn btn-add no-print" onclick="addIncomeRow()">+ Tambah</button>
+        </div>
         <table>
             <thead>
                 <tr>
                     <th class="text-center" style="width: 8%;">Bil.</th>
-                    <th>Perkara / Item</th>
-                    <th class="text-center">Kuantiti & Harga</th>
-                    <th class="text-right" style="width: 22%;">Jumlah (RM)</th>
-                    <th class="text-center" style="width: 15%;">Kumpulan</th>
+                    <th>Sumber Pendapatan</th>
+                    <th class="text-right" style="width: 25%;">Jumlah (RM)</th>
+                    <th class="text-center no-print" style="width: 5%;"></th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td class="text-center">1</td>
-                    <td>Makanan Murid</td>
-                    <td class="text-center">40 × RM 25.00</td>
-                    <td class="text-right">1,000.00</td>
-                    <td class="text-center">Murid</td>
-                </tr>
-                <tr>
-                    <td class="text-center">2</td>
-                    <td>Makanan Waris</td>
-                    <td class="text-center">40 × RM 40.00</td>
-                    <td class="text-right">1,600.00</td>
-                    <td class="text-center">Waris</td>
-                </tr>
-                <tr>
-                    <td class="text-center">3</td>
-                    <td>Makanan Guru / Jemputan</td>
-                    <td class="text-center">20 × RM 40.00</td>
-                    <td class="text-right">800.00</td>
-                    <td class="text-center">Guru / VIP</td>
-                </tr>
-                <tr>
-                    <td class="text-center">4</td>
-                    <td>Cenderahati Waris (Kek/Burger)</td>
-                    <td class="text-center">40 × RM 23.00</td>
-                    <td class="text-right">920.00</td>
-                    <td class="text-center">Waris</td>
-                </tr>
-                <tr>
-                    <td class="text-center">5</td>
-                    <td>Cenderahati Guru</td>
-                    <td class="text-center">13 × RM 63.00</td>
-                    <td class="text-right">819.00</td>
-                    <td class="text-center">Guru / VIP</td>
-                </tr>
-                <tr>
-                    <td class="text-center">6</td>
-                    <td>Kek Hari Jadi</td>
-                    <td class="text-center">1 × RM 100.00</td>
-                    <td class="text-right">100.00</td>
-                    <td class="text-center">Guru / VIP</td>
-                </tr>
-                <tr>
-                    <td class="text-center">7</td>
-                    <td>Bunga / Bouquet Murid</td>
-                    <td class="text-center">40 × RM 6.00</td>
-                    <td class="text-right">240.00</td>
-                    <td class="text-center">Murid</td>
-                </tr>
-                <tr>
-                    <td class="text-center">8</td>
-                    <td>Banner & Belon Hiasan</td>
-                    <td class="text-center">1 × RM 450.00</td>
-                    <td class="text-right">450.00</td>
-                    <td class="text-center">Guru / VIP</td>
-                </tr>
-                <tr>
-                    <td class="text-center">9</td>
-                    <td>Hadiah Kecemerlangan Murid</td>
-                    <td class="text-center">5 × RM 60.00</td>
-                    <td class="text-right">300.00</td>
-                    <td class="text-center">Murid</td>
-                </tr>
-                <tr>
-                    <td class="text-center">10</td>
-                    <td>Cenderahati Jemputan</td>
-                    <td class="text-center">7 × RM 13.00</td>
-                    <td class="text-right">91.00</td>
-                    <td class="text-center">Guru / VIP</td>
-                </tr>
-                <tr class="total-row">
-                    <td colspan="3" class="text-right">JUMLAH KESELURUHAN PERBELANJAAN</td>
-                    <td class="text-right">RM 6,320.00</td>
-                    <td></td>
-                </tr>
+            <tbody id="income-tbody">
+                <!-- Data dinikmati & dikira secara automatik -->
             </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="2" class="text-right">JUMLAH KESELURUHAN PENDAPATAN</td>
+                    <td class="text-right" id="total-income-display">RM 0.00</td>
+                    <td class="no-print"></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Section B: Perbelanjaan -->
+        <div class="section-title">
+            <span>B. Ringkasan Perbelanjaan</span>
+            <button class="btn btn-add no-print" onclick="addExpenseRow()">+ Tambah</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 6%;">Bil.</th>
+                    <th>Perkara / Item</th>
+                    <th class="text-center" style="width: 12%;">Kuantiti</th>
+                    <th class="text-right" style="width: 15%;">Harga Unit (RM)</th>
+                    <th class="text-right" style="width: 18%;">Jumlah (RM)</th>
+                    <th class="text-center" style="width: 15%;">Kumpulan</th>
+                    <th class="text-center no-print" style="width: 5%;"></th>
+                </tr>
+            </thead>
+            <tbody id="expense-tbody">
+                <!-- Data dinikmati & dikira secara automatik -->
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="4" class="text-right">JUMLAH KESELURUHAN PERBELANJAAN</td>
+                    <td class="text-right" id="total-expense-display">RM 0.00</td>
+                    <td></td>
+                    <td class="no-print"></td>
+                </tr>
+            </tfoot>
         </table>
 
         <!-- Summary -->
         <div class="summary-box">
             <div class="summary-item">
                 <div class="label">Jumlah Pendapatan</div>
-                <div class="value">RM 6,320.00</div>
+                <div class="value" id="summary-income">RM 0.00</div>
             </div>
             <div class="summary-item">
                 <div class="symbol">-</div>
             </div>
             <div class="summary-item">
                 <div class="label">Jumlah Perbelanjaan</div>
-                <div class="value">RM 6,320.00</div>
+                <div class="value" id="summary-expense">RM 0.00</div>
             </div>
             <div class="summary-item">
                 <div class="symbol">=</div>
             </div>
             <div class="summary-item">
-                <div class="label">Baki / Baki Bersih</div>
-                <div class="value">RM 0.00</div>
+                <div class="label">Baki Bersih</div>
+                <div class="value" id="summary-balance">RM 0.00</div>
             </div>
         </div>
 
@@ -386,15 +336,132 @@
             <div class="signature-box">
                 <p>Disediakan oleh:</p>
                 <div class="signature-line"></div>
-                <p class="font-bold">(Bendahari Program)</p>
+                <input type="text" value="(Bendahari Program)" class="text-center font-bold" style="border:none; background:transparent;">
             </div>
             <div class="signature-box">
                 <p>Disahkan oleh:</p>
                 <div class="signature-line"></div>
-                <p class="font-bold">(Penyelaras Program)</p>
+                <input type="text" value="(Penyelaras Program)" class="text-center font-bold" style="border:none; background:transparent;">
             </div>
         </div>
     </div>
 
+    <script>
+        const initialIncome = [
+            { source: "Dana PPKI", amount: 2000 },
+            { source: "Tabung Murid", amount: 1000 },
+            { source: "Dana Waris", amount: 1600 },
+            { source: "Sumbangan Waris", amount: 400 },
+            { source: "Sumbangan Guru", amount: 260 },
+            { source: "Sumbangan Bunga / Bouquet Murid", amount: 240 },
+            { source: "Sumbangan Individu", amount: 820 }
+        ];
+
+        const initialExpenses = [
+            { name: "Makanan Murid", qty: 40, price: 25, category: "Murid" },
+            { name: "Makanan Waris", qty: 40, price: 40, category: "Waris" },
+            { name: "Makanan Guru / Jemputan", qty: 20, price: 40, category: "Guru / VIP" },
+            { name: "Cenderahati Waris (Kek/Burger)", qty: 40, price: 23, category: "Waris" },
+            { name: "Cenderahati Guru", qty: 13, price: 63, category: "Guru / VIP" },
+            { name: "Kek Hari Jadi", qty: 1, price: 100, category: "Guru / VIP" },
+            { name: "Bunga / Bouquet Murid", qty: 40, price: 6, category: "Murid" },
+            { name: "Banner & Belon Hiasan", qty: 1, price: 450, category: "Guru / VIP" },
+            { name: "Hadiah Kecemerlangan Murid", qty: 5, price: 60, category: "Murid" },
+            { name: "Cenderahati Jemputan", qty: 7, price: 13, category: "Guru / VIP" }
+        ];
+
+        function init() {
+            const incTbody = document.getElementById('income-tbody');
+            incTbody.innerHTML = '';
+            initialIncome.forEach(item => addIncomeRow(item.source, item.amount));
+
+            const expTbody = document.getElementById('expense-tbody');
+            expTbody.innerHTML = '';
+            initialExpenses.forEach(item => addExpenseRow(item.name, item.qty, item.price, item.category));
+
+            calculateTotals();
+        }
+
+        function addIncomeRow(source = "", amount = 0) {
+            const tbody = document.getElementById('income-tbody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center row-num"></td>
+                <td><input type="text" class="inc-source" value="${source}" oninput="calculateTotals()"></td>
+                <td><input type="number" class="inc-amount" value="${amount}" step="0.01" oninput="calculateTotals()"></td>
+                <td class="text-center no-print"><button class="btn btn-del" onclick="deleteRow(this)">🗑️</button></td>
+            `;
+            tbody.appendChild(tr);
+            updateRowNumbers();
+            calculateTotals();
+        }
+
+        function addExpenseRow(name = "", qty = 1, price = 0, category = "") {
+            const tbody = document.getElementById('expense-tbody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center row-num"></td>
+                <td><input type="text" class="exp-name" value="${name}" oninput="calculateTotals()"></td>
+                <td><input type="number" class="exp-qty" value="${qty}" oninput="updateExpenseRowTotal(this)"></td>
+                <td><input type="number" class="exp-price" value="${price}" step="0.01" oninput="updateExpenseRowTotal(this)"></td>
+                <td class="text-right font-bold exp-total">0.00</td>
+                <td><input type="text" class="text-center exp-cat" value="${category}"></td>
+                <td class="text-center no-print"><button class="btn btn-del" onclick="deleteRow(this)">🗑️</button></td>
+            `;
+            tbody.appendChild(tr);
+            updateExpenseRowTotal(tr.querySelector('.exp-qty'));
+            updateRowNumbers();
+        }
+
+        function updateExpenseRowTotal(element) {
+            const tr = element.closest('tr');
+            const qty = parseFloat(tr.querySelector('.exp-qty').value) || 0;
+            const price = parseFloat(tr.querySelector('.exp-price').value) || 0;
+            const total = qty * price;
+            tr.querySelector('.exp-total').innerText = total.toFixed(2);
+            calculateTotals();
+        }
+
+        function deleteRow(btn) {
+            const row = btn.closest('tr');
+            row.remove();
+            updateRowNumbers();
+            calculateTotals();
+        }
+
+        function updateRowNumbers() {
+            document.querySelectorAll('#income-tbody tr').forEach((tr, index) => {
+                tr.querySelector('.row-num').innerText = index + 1;
+            });
+            document.querySelectorAll('#expense-tbody tr').forEach((tr, index) => {
+                tr.querySelector('.row-num').innerText = index + 1;
+            });
+        }
+
+        function calculateTotals() {
+            let totalIncome = 0;
+            document.querySelectorAll('.inc-amount').forEach(input => {
+                totalIncome += parseFloat(input.value) || 0;
+            });
+
+            let totalExpense = 0;
+            document.querySelectorAll('.exp-total').forEach(td => {
+                totalExpense += parseFloat(td.innerText) || 0;
+            });
+
+            const balance = totalIncome - totalExpense;
+
+            const formatRM = (val) => 'RM ' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            document.getElementById('total-income-display').innerText = formatRM(totalIncome);
+            document.getElementById('total-expense-display').innerText = formatRM(totalExpense);
+
+            document.getElementById('summary-income').innerText = formatRM(totalIncome);
+            document.getElementById('summary-expense').innerText = formatRM(totalExpense);
+            document.getElementById('summary-balance').innerText = formatRM(balance);
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
