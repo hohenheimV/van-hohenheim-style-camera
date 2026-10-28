@@ -1,467 +1,168 @@
 <!DOCTYPE html>
 <html lang="ms">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penyata Kewangan Interactive - PPKI 2026</title>
-    <style>
-        :root {
-            --primary-color: #1a365d;
-            --secondary-color: #2b6cb0;
-            --accent-color: #edf2f7;
-            --border-color: #cbd5e0;
-            --text-color: #2d3748;
-            --danger-color: #e53e3e;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Utama</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f7fafc;
+    }
 
-        body {
-            font-family: Arial, sans-serif;
-            color: var(--text-color);
-            line-height: 1.2;
-            margin: 0;
-            padding: 20px;
-            background-color: #f7fafc;
-        }
+    /* Bahagian Menu Atas / Tiles Dashboard */
+    #dashboard-home {
+      padding: 40px;
+      text-align: center;
+    }
 
-        .document-container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: #ffffff;
-            padding: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-        }
+    .tile-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 30px;
+    }
 
-        .header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 10px;
-        }
+    .tile {
+      background: white;
+      padding: 25px 40px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      cursor: pointer;
+      font-weight: bold;
+      color: #1a365d;
+      border: 2px solid #2b6cb0;
+      transition: all 0.2s ease;
+    }
 
-        .logo {
-            width: 70px;
-            height: 70px;
-            object-fit: contain;
-            flex-shrink: 0;
-        }
+    .tile:hover {
+      background-color: #2b6cb0;
+      color: white;
+      transform: translateY(-3px);
+    }
 
-        .header-text {
-            flex: 1;
-        }
+    /* Kotak paparan modul penuh (menggantikan isi) */
+    #app-container {
+      width: 100%;
+      min-height: 100vh;
+      background: white;
+    }
 
-        .header-text h3 {
-            margin: 0;
-            text-align: center;
-            font-size: 16px;
-            text-transform: uppercase;
-        }
+    /* Butang Kembali ke Dashboard asal */
+    .back-btn-float {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      z-index: 9999;
+      background-color: #e53e3e;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
 
-        .section-title {
-            color: var(--secondary-color);
-            font-size: 11px;
-            font-weight: bold;
-            border-bottom: 2px solid var(--secondary-color);
-            padding-bottom: 3px;
-            margin-top: 15px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    .back-btn-float:hover {
+      background-color: #c53030;
+    }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 8px;
-            font-size: 11px;
-        }
-
-        th, td {
-            padding: 5px 8px;
-            border: 1px solid var(--border-color);
-            text-align: left;
-        }
-
-        th {
-            background-color: var(--primary-color);
-            color: white;
-            font-weight: 600;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f8fafc;
-        }
-
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .font-bold { font-weight: bold; }
-
-        input[type="text"], input[type="number"] {
-            width: 100%;
-            border: 1px solid #e2e8f0;
-            padding: 4px 6px;
-            border-radius: 4px;
-            font-family: inherit;
-            font-size: inherit;
-            box-sizing: border-box;
-        }
-
-        input[type="number"] {
-            text-align: right;
-        }
-
-        .total-row {
-            background-color: var(--accent-color) !important;
-            font-weight: bold;
-        }
-
-        .summary-box {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-            background-color: var(--accent-color);
-            padding: 12px 20px;
-            border-radius: 6px;
-            border-left: 4px solid var(--secondary-color);
-        }
-
-        .summary-item {
-            text-align: center;
-        }
-
-        .summary-item .label {
-            font-size: 10px;
-            color: #4a5568;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-
-        .summary-item .value {
-            font-size: 16px;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-        
-        .summary-item .symbol {
-            font-size: 20px;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .signature-section {
-            margin-top: 30px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .signature-box {
-            width: 40%;
-            text-align: center;
-            font-size: 11px;
-        }
-
-        .signature-line {
-            border-bottom: 1px solid #000;
-            margin-top: 45px;
-            margin-bottom: 5px;
-        }
-
-        .btn {
-            background-color: var(--secondary-color);
-            color: white;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .btn:hover {
-            background-color: var(--primary-color);
-        }
-
-        .btn-add {
-            background-color: #38a169;
-        }
-        .btn-add:hover {
-            background-color: #2f855a;
-        }
-
-        .btn-del {
-            background-color: var(--danger-color);
-            padding: 2px 6px;
-            font-size: 10px;
-        }
-        .btn-del:hover {
-            background-color: #c53030;
-        }
-
-        .print-btn {
-            display: block;
-            width: 200px;
-            margin: 0 auto 15px auto;
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-
-        /* PRINT STYLES FOR EXACT 1-PAGE A4 PORTRAIT */
-        @media print {
-            @page {
-                size: A4 portrait;
-                margin: 10mm;
-            }
-            body {
-                background: white;
-                padding: 0;
-            }
-            .document-container {
-                box-shadow: none;
-                padding: 0;
-                width: 100%;
-                max-width: 100%;
-            }
-            .no-print, .btn-del, .btn-add {
-                display: none !important;
-            }
-            input {
-                border: none !important;
-                background: transparent !important;
-                padding: 0 !important;
-            }
-            input[type="number"]::-webkit-inner-spin-button,
-            input[type="number"]::-webkit-outer-spin-button {
-                -webkit-appearance: none;
-                margin: 0;
-            }
-        }
-    </style>
+    .hidden {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
 
-    <button class="btn print-btn no-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
-
-    <div class="document-container">
-        <!-- Header with Logo -->
-        <div class="header">
-            <img src="test.jpg" alt="Lencana Sekolah" class="logo" onerror="this.style.display='none'">
-            <div class="header-text">
-                <h3 contenteditable="true">PENYATA KEWANGAN MAJLIS APRESIASI DAN SAMBUTAN HARI LAHIR PPKI 2026</h3>
-            </div>
-        </div>
-
-        <!-- Section A: Pendapatan -->
-        <div class="section-title">
-            <span>A. Ringkasan Pendapatan</span>
-            <button class="btn btn-add no-print" onclick="addIncomeRow()">+ Tambah</button>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th class="text-center" style="width: 8%;">Bil.</th>
-                    <th>Sumber Pendapatan</th>
-                    <th class="text-right" style="width: 25%;">Jumlah (RM)</th>
-                    <th class="text-center no-print" style="width: 5%;"></th>
-                </tr>
-            </thead>
-            <tbody id="income-tbody">
-                <!-- Data dinikmati & dikira secara automatik -->
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td colspan="2" class="text-right">JUMLAH KESELURUHAN PENDAPATAN</td>
-                    <td class="text-right" id="total-income-display">RM 0.00</td>
-                    <td class="no-print"></td>
-                </tr>
-            </tfoot>
-        </table>
-
-        <!-- Section B: Perbelanjaan -->
-        <div class="section-title">
-            <span>B. Ringkasan Perbelanjaan</span>
-            <button class="btn btn-add no-print" onclick="addExpenseRow()">+ Tambah</button>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th class="text-center" style="width: 6%;">Bil.</th>
-                    <th>Perkara / Item</th>
-                    <th class="text-center" style="width: 12%;">Kuantiti</th>
-                    <th class="text-right" style="width: 15%;">Harga Unit (RM)</th>
-                    <th class="text-right" style="width: 18%;">Jumlah (RM)</th>
-                    <th class="text-center" style="width: 15%;">Kumpulan</th>
-                    <th class="text-center no-print" style="width: 5%;"></th>
-                </tr>
-            </thead>
-            <tbody id="expense-tbody">
-                <!-- Data dinikmati & dikira secara automatik -->
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td colspan="4" class="text-right">JUMLAH KESELURUHAN PERBELANJAAN</td>
-                    <td class="text-right" id="total-expense-display">RM 0.00</td>
-                    <td></td>
-                    <td class="no-print"></td>
-                </tr>
-            </tfoot>
-        </table>
-
-        <!-- Summary -->
-        <div class="summary-box">
-            <div class="summary-item">
-                <div class="label">Jumlah Pendapatan</div>
-                <div class="value" id="summary-income">RM 0.00</div>
-            </div>
-            <div class="summary-item">
-                <div class="symbol">-</div>
-            </div>
-            <div class="summary-item">
-                <div class="label">Jumlah Perbelanjaan</div>
-                <div class="value" id="summary-expense">RM 0.00</div>
-            </div>
-            <div class="summary-item">
-                <div class="symbol">=</div>
-            </div>
-            <div class="summary-item">
-                <div class="label">Baki Bersih</div>
-                <div class="value" id="summary-balance">RM 0.00</div>
-            </div>
-        </div>
-
-        <!-- Signatures -->
-        <div class="signature-section">
-            <div class="signature-box">
-                <p>Disediakan oleh:</p>
-                <div class="signature-line"></div>
-                <input type="text" value="(Bendahari Program)" class="text-center font-bold" style="border:none; background:transparent;">
-            </div>
-            <div class="signature-box">
-                <p>Disahkan oleh:</p>
-                <div class="signature-line"></div>
-                <input type="text" value="(Penyelaras Program)" class="text-center font-bold" style="border:none; background:transparent;">
-            </div>
-        </div>
+  <!-- Menu Utama / Tiles Dashboard -->
+  <div id="dashboard-home">
+    <h2>Selamat Datang ke Dashboard</h2>
+    <p>Sila pilih modul di bawah:</p>
+    
+    <div class="tile-container">
+      <div class="tile" onclick="loadFullModule('penyata.html')">
+        📊 Modul Penyata Kewangan PPKI 2026
+      </div>
+      <!-- Boleh tambah tile lain di sini -->
+      <div class="tile" onclick="loadFullModule('proto1.html')">📁 Modul B</div>
+      <div class="tile" onclick="loadFullModule('proto2.html')">📁 Modul C</div>
     </div>
+  </div>
 
-    <script>
-        const initialIncome = [
-            { source: "Dana PPKI", amount: 2000 },
-            { source: "Tabung Murid", amount: 1000 },
-            { source: "Dana Waris", amount: 1600 },
-            { source: "Sumbangan Waris", amount: 400 },
-            { source: "Sumbangan Guru", amount: 260 },
-            { source: "Sumbangan Bunga / Bouquet Murid", amount: 240 },
-            { source: "Sumbangan Individu", amount: 820 }
-        ];
+  <!-- Bekas untuk memuatkan keseluruhan fail HTML modul -->
+  <div id="app-container"></div>
 
-        const initialExpenses = [
-            { name: "Makanan Murid", qty: 40, price: 25, category: "Murid" },
-            { name: "Makanan Waris", qty: 40, price: 40, category: "Waris" },
-            { name: "Makanan Guru / Jemputan", qty: 20, price: 40, category: "Guru / VIP" },
-            { name: "Cenderahati Waris (Kek/Burger)", qty: 40, price: 23, category: "Waris" },
-            { name: "Cenderahati Guru", qty: 13, price: 63, category: "Guru / VIP" },
-            { name: "Kek Hari Jadi", qty: 1, price: 100, category: "Guru / VIP" },
-            { name: "Bunga / Bouquet Murid", qty: 40, price: 6, category: "Murid" },
-            { name: "Banner & Belon Hiasan", qty: 1, price: 450, category: "Guru / VIP" },
-            { name: "Hadiah Kecemerlangan Murid", qty: 5, price: 60, category: "Murid" },
-            { name: "Cenderahati Jemputan", qty: 7, price: 13, category: "Guru / VIP" }
-        ];
+  <script>
+    async function loadFullModule(file) {
+      try {
+        const response = await fetch(file);
+        if (!response.ok) throw new Error('Gagal memuatkan fail modul.');
+        
+        const htmlText = await response.text();
+        
+        // Parse teks HTML luar
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
 
-        function init() {
-            const incTbody = document.getElementById('income-tbody');
-            incTbody.innerHTML = '';
-            initialIncome.forEach(item => addIncomeRow(item.source, item.amount));
+        // Sembunyikan menu utama dashboard
+        document.getElementById('dashboard-home').classList.add('hidden');
 
-            const expTbody = document.getElementById('expense-tbody');
-            expTbody.innerHTML = '';
-            initialExpenses.forEach(item => addExpenseRow(item.name, item.qty, item.price, item.category));
+        const appContainer = document.getElementById('app-container');
+        appContainer.innerHTML = ''; // Kosongkan dulu
 
-            calculateTotals();
-        }
+        // Masukkan butang "Kembali ke Dashboard" terapung di atas modul
+        const backButton = document.createElement('button');
+        backButton.className = 'back-btn-float no-print';
+        backButton.innerHTML = '⬅️ Kembali ke Menu Utama';
+        backButton.onclick = resetToDashboard;
+        appContainer.appendChild(backButton);
 
-        function addIncomeRow(source = "", amount = 0) {
-            const tbody = document.getElementById('income-tbody');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="text-center row-num"></td>
-                <td><input type="text" class="inc-source" value="${source}" oninput="calculateTotals()"></td>
-                <td><input type="number" class="inc-amount" value="${amount}" step="0.01" oninput="calculateTotals()"></td>
-                <td class="text-center no-print"><button class="btn btn-del" onclick="deleteRow(this)">🗑️</button></td>
-            `;
-            tbody.appendChild(tr);
-            updateRowNumbers();
-            calculateTotals();
-        }
+        // Ambil gaya CSS (<style>) dari fail modul dan masukkan ke dalam dokumen
+        doc.querySelectorAll('style').forEach(style => {
+          const newStyle = document.createElement('style');
+          newStyle.textContent = style.textContent;
+          appContainer.appendChild(newStyle);
+        });
 
-        function addExpenseRow(name = "", qty = 1, price = 0, category = "") {
-            const tbody = document.getElementById('expense-tbody');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="text-center row-num"></td>
-                <td><input type="text" class="exp-name" value="${name}" oninput="calculateTotals()"></td>
-                <td><input type="number" class="exp-qty" value="${qty}" oninput="updateExpenseRowTotal(this)"></td>
-                <td><input type="number" class="exp-price" value="${price}" step="0.01" oninput="updateExpenseRowTotal(this)"></td>
-                <td class="text-right font-bold exp-total">0.00</td>
-                <td><input type="text" class="text-center exp-cat" value="${category}"></td>
-                <td class="text-center no-print"><button class="btn btn-del" onclick="deleteRow(this)">🗑️</button></td>
-            `;
-            tbody.appendChild(tr);
-            updateExpenseRowTotal(tr.querySelector('.exp-qty'));
-            updateRowNumbers();
-        }
+        // Masukkan kandungan <body> dari fail modul
+        const contentWrapper = document.createElement('div');
+        contentWrapper.innerHTML = doc.body.innerHTML;
+        appContainer.appendChild(contentWrapper);
 
-        function updateExpenseRowTotal(element) {
-            const tr = element.closest('tr');
-            const qty = parseFloat(tr.querySelector('.exp-qty').value) || 0;
-            const price = parseFloat(tr.querySelector('.exp-price').value) || 0;
-            const total = qty * price;
-            tr.querySelector('.exp-total').innerText = total.toFixed(2);
-            calculateTotals();
-        }
+        // Jalankan semula skrip (<script>) yang mungkin ada dalam fail modul tersebut
+        doc.querySelectorAll('script').forEach(script => {
+          const newScript = document.createElement('script');
+          if (script.src) {
+            newScript.src = script.src;
+          } else {
+            newScript.textContent = script.textContent;
+          }
+          document.body.appendChild(newScript);
+        });
 
-        function deleteRow(btn) {
-            const row = btn.closest('tr');
-            row.remove();
-            updateRowNumbers();
-            calculateTotals();
-        }
+        // Ubah URL state browser tanpa refresh (cantik untuk GitHub Pages)
+        window.history.pushState({ module: file }, '', `#${file.replace('.html', '')}`);
 
-        function updateRowNumbers() {
-            document.querySelectorAll('#income-tbody tr').forEach((tr, index) => {
-                tr.querySelector('.row-num').innerText = index + 1;
-            });
-            document.querySelectorAll('#expense-tbody tr').forEach((tr, index) => {
-                tr.querySelector('.row-num').innerText = index + 1;
-            });
-        }
+      } catch (err) {
+        alert('Ralat: ' + err.message);
+      }
+    }
 
-        function calculateTotals() {
-            let totalIncome = 0;
-            document.querySelectorAll('.inc-amount').forEach(input => {
-                totalIncome += parseFloat(input.value) || 0;
-            });
+    function resetToDashboard() {
+      document.getElementById('app-container').innerHTML = '';
+      document.getElementById('dashboard-home').classList.remove('hidden');
+      window.history.pushState({}, '', window.location.pathname);
+    }
 
-            let totalExpense = 0;
-            document.querySelectorAll('.exp-total').forEach(td => {
-                totalExpense += parseFloat(td.innerText) || 0;
-            });
-
-            const balance = totalIncome - totalExpense;
-
-            const formatRM = (val) => 'RM ' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-            document.getElementById('total-income-display').innerText = formatRM(totalIncome);
-            document.getElementById('total-expense-display').innerText = formatRM(totalExpense);
-
-            document.getElementById('summary-income').innerText = formatRM(totalIncome);
-            document.getElementById('summary-expense').innerText = formatRM(totalExpense);
-            document.getElementById('summary-balance').innerText = formatRM(balance);
-        }
-
-        window.onload = init;
-    </script>
+    // Sokongan butang Back/Forward browser
+    window.addEventListener('popstate', () => {
+      if (!window.location.hash) {
+        resetToDashboard();
+      }
+    });
+  </script>
 </body>
-                      </html>
+</html>
